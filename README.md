@@ -102,7 +102,7 @@ with can.Bus() as bus:
 
 ## Other features
 
-Check out the (`Hand` class)[] for other capabilities.
+Check out the [`Hand` class](blob/main/tetra/hand.py) for other capabilities.
 
 # Tetra command-line interface
 
@@ -111,7 +111,7 @@ Installing the SDK also installs the `tetra` command-line utility, which is usef
 ## Admin interface
 
 You can launch the admin user interface by running `tetra ui`. The admin interface is browser based, and running the
-command starts a webserver on port 4004 that can be accessed via a web browser.
+command starts a webserver on port 4444 that can be accessed via a web browser.
 
 ## Updating firmware
 
