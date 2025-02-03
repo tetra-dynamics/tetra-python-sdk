@@ -102,7 +102,7 @@ with can.Bus() as bus:
 
 ## Other features
 
-Check out the [`Hand` class](blob/main/tetra/hand.py) for other capabilities.
+Check out the [`Hand` class](tetra/hand.py) for other capabilities.
 
 # Tetra command-line interface
 
