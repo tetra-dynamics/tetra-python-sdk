@@ -34,10 +34,10 @@ class DeviceNotFoundError(Exception):
     pass
 
 class Hand:
-    def __init__(self, can_bus: can.BusABC, can_id: int = None, handedness: Literal["left", "right"] | None = None):
+    def __init__(self, can_bus: can.BusABC, can_id: int = None, side: Literal["left", "right"] | None = None):
         if isinstance(can_bus, can.BusABC):
             if can_id is None:
-                wrong_handedness_found = False
+                wrong_side_found = False
                 for i in range(252):
                     id_guess = 1 + ((i + 49) % 252)
                     protocol = CANProtocol(can_bus, id_guess)
@@ -49,15 +49,15 @@ class Hand:
                         pass
 
                     if is_right is not None:
-                        if handedness is None or is_right == (handedness == 'right'):
+                        if side is None or is_right == (side == 'right'):
                             can_id = id_guess
                             break
                         else:
-                            wrong_handedness_found = True
+                            wrong_side_found = True
                 if can_id is None:
                     message = 'No hand found on the CAN bus'
-                    if wrong_handedness_found:
-                        message = f'No {handedness} hands found on the CAN bus'
+                    if wrong_side_found:
+                        message = f'No {side} hands found on the CAN bus'
                     raise DeviceNotFoundError(message)
 
             self.protocol = CANProtocol(can_bus, can_id)

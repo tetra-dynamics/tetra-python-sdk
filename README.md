@@ -35,14 +35,14 @@ This example turns the hand on, moves it through the power grip in 20 seconds, a
 ## Connecting to multiple hands
 
 When you create a `Hand` object with just a `can.Bus`, it will bind to the first hand it finds on the bus.
-If you want to connect to a left and right hand, you can provide a value for the `handedness` argument.
+If you want to connect to a left and right hand, you can provide a value for the `side` argument.
 
 ```
-left_hand = Hand(bus, handedness='left')
-right_hand = Hand(bus, handedness='right')
+left_hand = Hand(bus, side='left')
+right_hand = Hand(bus, side='right')
 ```
 
-By providing the `handedness` argument it will bind to the first left or right hand that it can find on the bus.
+By providing the `side` argument it will bind to the first left or right hand that it can find on the bus.
 If you want to connect to hand hand with a specific CAN ID you can use the `can_id` argument:
 
 ```
