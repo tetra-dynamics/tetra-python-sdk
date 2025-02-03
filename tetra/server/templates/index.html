@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tetra Hand Control</title>
+    <style>
+        .grid {
+            display: grid;
+            grid-auto-flow: row;
+            align-items: center;
+        }
+
+        .enabled.row,
+        .torque-row.row,
+        .joint-info {
+            margin-bottom: 12px;
+        }
+
+        #torque-limit {
+            width: 100%;
+        }
+
+        .row {
+            display: grid;
+            grid-auto-flow: column;
+            grid-template-columns: 120px 100px 100px;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+    </style>
+    <script src="static/tetra.js" async></script>
+</head>
+
+<body>
+    <div class="grid">
+        <div class="enabled row">
+            <div id="enabled-text">...</div>
+            <button id="toggle-enabled">Toggle</button>
+            <select name="grasp">
+                <option value="position">position</option>
+                {% for grasp in grasps %}
+                <option>{{grasp}}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="torque-row row">
+            <div>Torque limit</div>
+            <div>
+                <input id="torque-limit" type="range" step="0.1"></input>
+                <button id="reset-torque">Reset</button>
+            </div>
+            <input name="grasp-value" type="range" step="0.1"></input>
+        </div>
+        {% for joint in joints %}
+        <div id="joint-{{joint['id']}}" class="joint-info" data-joint-id="{{joint['id']}}">
+            <div class="row">
+                <div class="joint-position">Position</div>
+                <div class="joint-position-value"></div>
+                <input class="goal-position-value" type="range" min="{{joint['min']}}" max="{{joint['max']}}"
+                    step="0.001"></input>
+            </div>
+            <div class="row">
+                <div class="joint-torque">Torque</div>
+                <div class="joint-torque-value"></div>
+            </div>
+            <div class="row">
+                <div>Temp</div>
+                <div class="joint-temp-value"></div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+</body>
+
+</html>
