@@ -91,13 +91,14 @@ import tetra
 with can.Bus() as bus:
     hand = tetra.Hand(bus)
     hand.enable()
-    glove = Glove()
-    try:
-        while True:
-            hand.set_joint_positions(glove.get_joint_positions())
-            time.sleep(0.1)
-    finally:
-        hand.disable()
+    with tetra.Manus() as gloves:
+        try:
+            while True:
+                pos = gloves.get_joint_positions(side=hand.side)
+                hand.set_joint_positions(pos)
+                time.sleep(0.1)
+        finally:
+            hand.disable()
 ```
 
 ## Other features
