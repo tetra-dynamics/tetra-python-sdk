@@ -1,5 +1,6 @@
 import cffi
 import os
+import subprocess
 
 import numpy as np
 
@@ -142,8 +143,8 @@ class Manus:
 
             int CoreSdk_ConnectToHost(struct ManusHost host);
         ''')
-        lib_path = os.getenv('HOME') + '/.tetra/lib/libManusSDK_Integrated.so'
         self.ffi = ffi
+        lib_path = os.path.join(os.path.dirname(__file__), 'libManusSDK_Integrated.so')
         self.libmanus = ffi.dlopen(lib_path)
         self.ready = False
         self._rightHandIDs = set()
@@ -244,9 +245,20 @@ class Manus:
         sides = self._pos[self._pos_idx]
         return (sides[0] if side == 'left' else sides[1]).copy()
     
-    def _check_manus_status(status, message):
+    def _check_manus_status(self, status, message):
         if status != 0:
             raise ManusException(status, message)
+
+def setup_manus():
+    dest_path = '/etc/udev/rules.d/70-manus-hid.rules'
+    if os.path.exists(dest_path):
+        print('Manus integration is already setup')
+        return
+
+    source_path = os.path.join(os.path.dirname(__file__), '70-manus-hid.rules')
+    subprocess.run(['sudo', 'cp', source_path, dest_path])
+    subprocess.run(['sudo', 'udevadm', 'control', '--reload-rules'])
+    subprocess.run(['sudo', 'udevadm',  'trigger'])
 
 if __name__ == '__main__':
     import time

@@ -1,0 +1,9 @@
+# These rules let you connect to the Manus gloves without superuser privileges
+
+# HIDAPI/libusb
+SUBSYSTEMS=="usb", ATTRS{idVendor}=="3325", MODE:="0666"
+SUBSYSTEMS=="usb", ATTRS{idVendor}=="1915", MODE:="0666"
+
+# HIDAPI/hidraw
+KERNEL=="hidraw*", ATTRS{idVendor}=="3325", MODE:="0664"
+KERNEL=="hidraw*", ATTRS{idVendor}=="1915", MODE:="0664"
