@@ -79,7 +79,7 @@ class TetraRequestHandler(BaseHTTPRequestHandler):
     def _static_path_for_url(self, url_path):
         if not url_path.startswith('/static/') or '..' in url_path:
             return None
-        return 'tetra/server' + url_path
+        return os.path.join(os.path.dirname(__file__), 'server', url_path[1:])
     
     def serve_file(self, path):
         _, extension = os.path.splitext(path)

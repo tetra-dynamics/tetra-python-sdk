@@ -32,7 +32,7 @@ with can.Bus() as bus:
 
 This example turns the hand on, moves it through the power grip in 20 seconds, and then turns off the hand.
 
-## Connecting to multiple hands
+## Controlling multiple hands
 
 When you create a `Hand` object with just a `can.Bus`, it will bind to the first hand it finds on the bus.
 If you want to connect to a left and right hand, you can provide a value for the `side` argument.
@@ -80,7 +80,7 @@ This example first sets the hand to the zero position, and then sets every joint
 
 ## Controlling the hand using a glove
 
-If you want to control the hand using a glove you can use the `Glove` class. This currently supports Manus gloves.
+If you want to control the hand using a glove you can use the `Manus` class, which supports Manus gloves.
 Here's an example script that lets you control a hand with a glove at an update rate of roughly 10 times per second.
 
 ```
@@ -100,6 +100,8 @@ with can.Bus() as bus:
         finally:
             hand.disable()
 ```
+
+To install the necessary dependencies to use Manus run `tetra manus setup`.
 
 ## Other features
 

@@ -44,8 +44,8 @@ class Hand:
                     protocol.can_timeout = 0.1
                     is_right = None
                     try:
-                        is_right = protocol.get_is_right()
-                    except:
+                        is_right = protocol.get_side()
+                    except TimeoutError as e:
                         pass
 
                     if is_right is not None:
@@ -86,6 +86,10 @@ class Hand:
     def enabled(self):
         '''Whether the joint motors are enabled'''
         return self.protocol.enabled()
+
+    def get_side(self):
+        '''Returns 'left' or 'right' depending on whether it's a left or right hand'''
+        return 'right' if self.protocol.get_hand_type() & 1 else 'left'
 
     def get_torque_limit(self):
         '''Get the max power used by the joint motors, between 0 and 1'''

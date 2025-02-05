@@ -55,8 +55,14 @@ class CANProtocol:
     def enabled(self):
         return self._read_param(ParamType.TorqueEnabled) != 0
 
-    def get_is_right(self):
-        return self._read_param(ParamType.HandType) & 1 == 1
+    def get_side(self):
+        return self._read_param(ParamType.HandType)
+
+    def update_hand_type(self, side='left'):
+        if side not in ('left', 'right'):
+            raise ValueError('side must be either "left" or "right"')
+        new_type = 1 if side == 'right' else 0
+        self._write_param(ParamType.HandType, new_type)
 
     def update_can_id(self, new_can_id):
         self._write_param(ParamType.CANID, new_can_id, resp_hand_can_id=new_can_id)
@@ -205,11 +211,11 @@ class CANProtocol:
             # we can read at most 10 messages before finding the one we want
             resp = self.bus.recv(self.can_timeout)
             if resp is None:
-                return None
+                raise TimeoutError('No CAN response received')
             elif resp.arbitration_id == expected_arb_id:
                 return resp.data
             elif resp.is_extended_id:
-                print('not expected:', hex(resp.arbitration_id), hex(expected_arb_id))
+                #print('not expected:', hex(resp.arbitration_id), hex(expected_arb_id))
                 pass
 
         return None
