@@ -1,3 +1,5 @@
+import { Visualization } from "/static/visualization.js";
+
 async function apiFetch(path, options = {}) {
     if (options.body != undefined) {
         options.body = JSON.stringify(options.body);
@@ -23,65 +25,140 @@ function formatPos(value) {
     return numFormat2.format(value * 180 / Math.PI);
 }
 
-let hands;
-
-function setHands(handsResp) {
-    hands = handsResp.hands;
-
-    const enabled = hands[0].enabled;
-    document.getElementById('enabled-text').innerText = enabled ? 'Enabled' : 'Disabled';
-
-    const graspType = document.getElementsByName('grasp')[0].value;
-    updateGraspUI(graspType, enabled);
+function addOrRemoveClass(className, selector, shouldAdd) {
+    const el = document.querySelector(selector);
+    if (shouldAdd) {
+        el.classList.add(className);
+    } else {
+        el.classList.remove(className);
+    }
 }
 
-async function toggleEnabled() {
-    if (hands == undefined) {
+function handsForHandsResp(handsResp) {
+    return {
+        left: handsResp.hands[0],
+        right: handsResp.hands[1],
+    }
+}
+
+async function setEnabled(enabled) {
+    const hand = serverState.hands[localState.side];
+    if (!hand || !hand.connected || enabled == hand.enabled) {
         return;
     }
-    const enabled = !hands[0].enabled;
 
-    const handsResp = await apiFetch('/hands/0', { method: 'POST', body: { enabled } });
-    setHands(handsResp);
+    const idx = localState.side == 'left' ? '0' : '1';
+    const handsResp = await apiFetch('/hands/' + idx, { method: 'POST', body: { enabled } });
+    if (!enabled) {
+        localState[localState.side].graspType = undefined;
+        localState[localState.side].graspValue = 0;
+    }
+    updateHandsState(true, handsForHandsResp(handsResp));
+}
 
-    if (enabled) {
-        await updateGraspValue();
+const serverState = {
+    connected: false,
+    hands: {
+        left: {},
+        right: {},
     }
 }
 
-let joints;
-
-function setJoints(jointsResp) {
-    joints = jointsResp.joints;
-
-    const handEnabled = hands[0].enabled;
-    const grasp = document.getElementsByName('grasp')[0].value;
-
-    for (const joint of joints) {
-        const jointNode = document.getElementById('joint-' + String(joint.id));
-
-        jointNode.getElementsByClassName('joint-position-value')[0].innerText = formatPos(joint.position);
-        jointNode.getElementsByClassName('joint-torque-value')[0].innerText = numFormat2.format(joint.torque);
-        const tempNode = jointNode.getElementsByClassName('joint-temp-value')[0];
-        tempNode.innerText = joint.temp;
-        tempNode.style.backgroundColor = joint.temp < 35 ? '' : (joint.temp < 50 ? 'yellow' : 'red');
+const localState = {
+    side: undefined,
+    left: {
+        graspType: undefined,
+        graspValue: 0,
+    },
+    right: {
+        graspType: undefined,
+        graspValue: 0,
     }
-    updateGraspUI(grasp, handEnabled);
 }
 
-async function pollForJoints() {
-    const joints = await apiFetch('/hands/0/joints');
-    setJoints(joints);
-
-    setTimeout(pollForJoints, 1000);
+function updateHandsState(connected, hands) {
+    if (serverState.connected !== connected) {
+        serverState.connected = connected;
+        updateConnnected(connected);
+    }
+    if (connected) {
+        serverState.hands = hands;
+        updateHands(hands);
+    }
 }
 
-async function onGraspChange(e) {
-    updateGraspUI(e.target.value, hands[0].enabled);
+function updateConnnected(connected) {
+    addOrRemoveClass('connected', '#host-connection-status', connected);
+    addOrRemoveClass('hidden', '#hand-selector', !connected);
+}
 
-    if (hands[0].enabled) {
-        await updateGraspValue();
+function updateHands(hands) {
+    addOrRemoveClass('connected', '#left-connection-status', hands.left.connected);
+    addOrRemoveClass('inverted', '#left-connection-status', localState.side == 'left');
+    addOrRemoveClass('connected', '#right-connection-status', hands.right.connected);
+    addOrRemoveClass('inverted', '#right-connection-status', localState.side == 'right');
+    addOrRemoveClass('disabled', '#select-left-hand', !hands.left.connected);
+    addOrRemoveClass('disabled', '#select-right-hand', !hands.right.connected);
+    addOrRemoveClass('selected', '#select-left-hand', localState.side == 'left');
+    addOrRemoveClass('selected', '#select-right-hand', localState.side == 'right');
+
+    viz.updateHands(hands);
+
+    updateHandDetails(hands);
+}
+
+function updateHandDetails(hands) {
+    const detailsActive = (localState.side == 'left' && hands.left.connected) ||
+        (localState.side == 'right' && hands.right.connected);
+    addOrRemoveClass('hidden', '#hand-details', !detailsActive);
+
+    if (detailsActive) {
+        const hand = hands[localState.side];
+        addOrRemoveClass('selected', '#torque-on', hand.enabled);
+        addOrRemoveClass('selected', '#torque-off', !hand.enabled);
+
+        addOrRemoveClass('hidden', '#grasp-section', !hand.enabled);
+        if (hand.enabled) {
+            updateGraspUI();
+        }
     }
+}
+
+function updateGraspUI() {
+    const { graspType } = localState[localState.side];
+    addOrRemoveClass('selected', '#grasp-none', graspType == undefined);
+    addOrRemoveClass('selected', '#grasp-power', graspType == 'power');
+    addOrRemoveClass('selected', '#grasp-tip', graspType == 'tip');
+
+    addOrRemoveClass('hidden', '#grasp-value', graspType == undefined);
+}
+
+
+function setSide(side) {
+    if (serverState.hands[side].connected) {
+        localState.side = side
+    }
+    updateHands(serverState.hands);
+    updateHandDetails(serverState.hands);
+}
+
+async function pollForHandState(firstRun) {
+    let handsResp;
+    let connected = false;
+    let error = false;
+    try {
+        let path = '/hands'
+        if (firstRun) {
+            path += '?refresh=1'
+        }
+        handsResp = await apiFetch(path);
+        connected = true;
+    } catch (e) {
+        error = true;
+    }
+    updateHandsState(connected, handsResp ? handsForHandsResp(handsResp) : undefined);
+
+    setTimeout(pollForHandState, error ? 5000 : 1000);
 }
 
 class LatestUpdater {
@@ -115,34 +192,34 @@ class LatestUpdater {
     }
 }
 
-const graspUpdater = new LatestUpdater(async function (body) {
-    await apiFetch('/hands/0', { method: 'POST', body });
-})
+const graspUpdaters = {
+    left: new LatestUpdater(async function (body) {
+        await apiFetch('/hands/0', { method: 'POST', body });
+    }),
+    right: new LatestUpdater(async function (body) {
+        await apiFetch('/hands/1', { method: 'POST', body });
+    })
+}
+
+
+function setGrasp(graspType) {
+    localState[localState.side].graspType = graspType;
+    localState[localState.side].graspValue = 0;
+
+    graspUpdaters[localState.side].update({ grasp: graspType, graspValue: 0 })
+
+    updateGraspUI();
+}
 
 async function updateGraspValue() {
-    const grasp = document.getElementsByName('grasp')[0].value;
-    if (grasp === 'position') {
-        return;
-    }
-    const graspValue = Number(document.getElementsByName('grasp-value')[0].value) / 100;
-    graspUpdater.update({ grasp, graspValue });
+    const graspValue = document.getElementById('grasp-value').value;
+    localState[localState.side].graspValue = graspValue;
+    const { graspType } = localState[localState.side];
+    graspUpdaters[localState.side].update({ grasp: graspType, graspValue })
+
+    updateGraspUI();
 }
 
-function updateGraspUI(graspType, handEnabled) {
-    const isGrasp = graspType !== 'position';
-
-    document.getElementsByName('grasp-value')[0].style.visibility = isGrasp ? '' : 'hidden';
-    const jointNodes = document.getElementsByClassName('joint-info');
-    for (let i = 0; i < jointNodes.length; i++) {
-        const input = jointNodes[i].querySelector('.goal-position-value');
-        const disabled = isGrasp || !handEnabled;
-        input.disabled = disabled;
-        if (joints && disabled) {
-            const joint = joints[i];
-            input.value = joint.position;
-        }
-    }
-}
 
 async function updateTorqueLimit(torqueLimit) {
     torqueLimit = Number(torqueLimit) / 100;
@@ -182,29 +259,23 @@ async function onGoalPosChange(e) {
     updater.update(position);
 }
 
+let viz;
+
 async function run() {
-    document.getElementById('toggle-enabled').addEventListener('click', toggleEnabled);
+    document.getElementById('select-left-hand').addEventListener('click', () => setSide('left'));
+    document.getElementById('select-right-hand').addEventListener('click', () => setSide('right'));
 
-    const graspTypeNode = document.querySelector('select[name=grasp]');
-    updateGraspUI(graspTypeNode.value, false);
-    graspTypeNode.addEventListener('change', onGraspChange);
+    document.getElementById('torque-on').addEventListener('click', () => setEnabled(true));
+    document.getElementById('torque-off').addEventListener('click', () => setEnabled(false));
 
-    const graspValueInput = document.getElementsByName('grasp-value')[0];
-    graspValueInput.value = 0;
-    graspValueInput.addEventListener('input', updateGraspValue);
+    document.getElementById('grasp-none').addEventListener('click', () => setGrasp(undefined));
+    document.getElementById('grasp-power').addEventListener('click', () => setGrasp('power'));
+    document.getElementById('grasp-tip').addEventListener('click', () => setGrasp('tip'));
+    document.getElementById('grasp-value').addEventListener('input', () => updateGraspValue());
 
-    for (const posInput of document.querySelectorAll('.goal-position-value')) {
-        posInput.addEventListener('input', onGoalPosChange);
-    }
+    viz = new Visualization(document.getElementById('visualization'));
 
-    const handsResp = await apiFetch('/hands');
-    setHands(handsResp);
-
-    document.getElementById("torque-limit").value = hands[0].torque_limit * 100;
-    document.getElementById("torque-limit").addEventListener("change", torqueLimitUpdated);
-    document.getElementById('reset-torque').addEventListener('click', resetTorque);
-
-    pollForJoints();
+    pollForHandState(true);
 }
 
 if (document.readyState === 'loading') {
@@ -213,3 +284,57 @@ if (document.readyState === 'loading') {
     run();
 }
 
+/*
+const testDisconnectedHand = { connected: false };
+const testJointsOpen = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+const testConnectedHandEnabled = {
+    connected: true,
+    enabled: true,
+    joints: testJointsOpen,
+}
+const testConnectedHandDisabled = {
+    connected: true,
+    enabled: false,
+    joints: testJointsOpen,
+}
+const testStates = {
+    'connected-no-hands': {
+        connected: true,
+        hands: {
+            left: testDisconnectedHand,
+            right: testDisconnectedHand
+        }
+    },
+    'connected-one-hand': {
+        connected: true,
+        hands: {
+            left: testConnectedHandEnabled,
+            right: testDisconnectedHand
+        }
+    },
+    'connected-both-hands': {
+        connected: true,
+        hands: {
+            left: testConnectedHandEnabled,
+            right: testConnectedHandDisabled
+        }
+    }
+}
+const testStateNames = Object.keys(testStates);
+let testStateIdx = 0;
+
+function setTestState(stateName) {
+    const state = testStates[stateName];
+    if (!state) {
+        console.error('state not found!');
+    }
+    updateHandsState(state.connected, state.hands);
+}
+
+function nextTestState() {
+    const stateName = testStateNames[testStateIdx];
+    testStateIdx += 1;
+    setTestState(stateName);
+}
+window.nextTestState = nextTestState;
+*/

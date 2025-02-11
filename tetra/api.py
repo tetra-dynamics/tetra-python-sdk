@@ -5,8 +5,9 @@ from .hand import Hand
 
 @dataclass
 class HandInfo:
+    connected: bool
     enabled: bool
-    torque_limit: float
+    joints: List[float] | None
     # TODO: tell whether it's left or right
 
 @dataclass
@@ -18,16 +19,41 @@ class JointInfo:
 
 @dataclass
 class HandResp:
-    hands: List[Hand]
+    hands: List[HandInfo]
 
 class TetraAPI:
     def __init__(self, hands: List[Hand]):
         self.hands = hands
+        self.connected = None
+
+    def refresh_connected(self):
+        connected = set()
+        for hand in self.hands:
+            try:
+                hand.enabled()
+                connected.add(hand)
+            except TimeoutError:
+                pass
+        self.connected = connected
 
     def hand_info(self) -> HandResp:
+        if self.connected is None:
+            self.refresh_connected()
+
         hand_infos = []
         for hand in self.hands:
-            hand_infos.append(HandInfo(hand.enabled(), hand.get_torque_limit()))
+            connected = hand in self.connected
+
+            enabled = False
+            joints = None
+
+            if connected:
+                try:
+                    enabled = hand.enabled()
+                    joints = hand.get_joint_positions().tolist()
+                except TimeoutError:
+                    connected = False
+            hand_infos.append(HandInfo(connected, enabled, joints))
         
         return HandResp(hand_infos)
 

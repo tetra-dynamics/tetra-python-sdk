@@ -10,6 +10,11 @@ class ManusException(Exception):
 
 class Manus:
     def __init__(self):
+        self.offsets = np.array([0.1, 0, 0, 0, 0, 0, 0, np.pi * 30 / 180, 0, 0])
+        mcp_scale = 1.2
+        pip_scale = 1.6
+        self.scale = np.array([1.5, mcp_scale, pip_scale, mcp_scale, pip_scale, mcp_scale, pip_scale, 1.8, 2, 1])
+
         ffi = cffi.FFI()
         ffi.cdef('''
             int CoreSdk_InitializeIntegrated();
@@ -243,7 +248,12 @@ class Manus:
 
     def get_joint_positions(self, side='left'):
         sides = self._pos[self._pos_idx]
-        return (sides[0] if side == 'left' else sides[1]).copy()
+        pos = sides[0] if side == 'left' else sides[1]
+        pos_adjusted = pos + self.offsets
+        for i in range(len(pos_adjusted)):
+            if pos_adjusted[i] > 0:
+                pos_adjusted[i] *= self.scale[i]
+        return pos_adjusted
     
     def _check_manus_status(self, status, message):
         if status != 0:

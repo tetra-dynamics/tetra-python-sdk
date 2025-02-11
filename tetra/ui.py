@@ -2,6 +2,7 @@ from dataclasses import asdict, dataclass
 import json
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import os
+import socket
 from typing import List
 
 import jinja2
@@ -16,6 +17,7 @@ env = jinja2.Environment(loader=jinja2.FileSystemLoader(template_dir))
 class TetraRequestHandler(BaseHTTPRequestHandler):
     def __init__(self, request, client_address, server):
         self.api = server.api
+        self.hostname = server.hostname
         super().__init__(request, client_address, server)
 
     def do_GET(self):
@@ -25,9 +27,11 @@ class TetraRequestHandler(BaseHTTPRequestHandler):
 
         if static_path is not None and os.path.isfile(static_path):
             self.serve_file(static_path)
-        if self.path.startswith("/v0"):
+        elif self.path.startswith("/v0"):
             resp = None
-            if self.path == "/v0/hands":
+            if self.path == "/v0/hands" or self.path == '/v0/hands?refresh=1':
+                if self.path == self.path == '/v0/hands?refresh=1':
+                    self.api.refresh_connected()
                 resp = asdict(self.api.hand_info())
             elif self.path == "/v0/hands/0/joints":
                 joints = self.api.joint_info(0)
@@ -42,7 +46,9 @@ class TetraRequestHandler(BaseHTTPRequestHandler):
         elif self.path == "/":
             self.render_template("index.html", {
                 'joints': self.api.hands[0].joint_configs,
-                'grasps': self.api.hands[0].grasps.keys()})
+                'grasps': self.api.hands[0].grasps.keys(),
+                'hostname': self.hostname,
+            })
         else:
             self.send_error(404, "Page Not Found")
     
@@ -50,18 +56,19 @@ class TetraRequestHandler(BaseHTTPRequestHandler):
         content_length = int(self.headers.get('Content-Length', 0))
         body = json.loads(self.rfile.read(content_length))
 
-        if self.path == '/v0/hands/0':
+        if self.path.startswith('/v0/hands/') and self.path[10:] in ('0', '1'):
+            idx = int(self.path[10:])
             if 'grasp' in body:
                 grasp_name = body['grasp']
-                grasp_value = body['graspValue']
-                self.api.set_grasp(0, grasp_name, grasp_value)
+                grasp_value = float(body['graspValue'])
+                self.api.set_grasp(idx, grasp_name, grasp_value)
 
             if 'enabled' in body:
                 enabled = body['enabled']
-                self.api.set_enabled(0, enabled)
+                self.api.set_enabled(idx, enabled)
 
             if 'torqueLimit' in body:
-                self.api.hands[0].set_torque_limit(body['torqueLimit'])
+                self.api.hands[idx].set_torque_limit(body['torqueLimit'])
 
             resp = self.api.hand_info()
             self.render_json(asdict(resp))
@@ -83,7 +90,7 @@ class TetraRequestHandler(BaseHTTPRequestHandler):
     
     def serve_file(self, path):
         _, extension = os.path.splitext(path)
-        content_types = {'.html': 'text/html', '.js': 'application/javascript'}
+        content_types = {'.html': 'text/html', '.js': 'application/javascript', '.woff2': 'font/woff2'}
         content_type = content_types.get(extension, 'application/octet-stream')
 
         with open(path, "rb") as file:
@@ -115,6 +122,7 @@ class TetraRequestHandler(BaseHTTPRequestHandler):
 class TetraServer(HTTPServer):
     def __init__(self, server_address, handler_class, api):
         self.api = api
+        self.hostname = socket.gethostname()
         super().__init__(server_address, handler_class)
 
 def serve(port: int, hands: List[Hand]):
@@ -123,15 +131,6 @@ def serve(port: int, hands: List[Hand]):
     httpd = TetraServer(server_address, TetraRequestHandler, api)
     print(f"Serving on port {port}")
     httpd.serve_forever()
-
-def main():
-    import can
-
-    with can.Bus() as bus:
-        hand = Hand(bus)
-        serve(4444, [hand])
-
-    # TODO: launch a webbrowser
 
 if __name__ == "__main__":
     main()

@@ -6,73 +6,224 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tetra Hand Control</title>
     <style>
-        .grid {
-            display: grid;
-            grid-auto-flow: row;
-            align-items: center;
+        @font-face {
+            font-family: 'Space Mono';
+            src: url('/static/SpaceMono-Regular.woff2') format('woff2');
+            font-weight: normal;
+            font-style: normal;
+            font-display: swap;
         }
 
-        .enabled.row,
-        .torque-row.row,
-        .joint-info {
-            margin-bottom: 12px;
+        @font-face {
+            font-family: 'Space Mono';
+            src: url('/static/SpaceMono-Bold.woff2') format('woff2');
+            font-weight: bold;
+            font-style: normal;
+            font-display: swap;
         }
 
-        #torque-limit {
+        :root {
+            --main-color: rgb(34 211 238);
+            --highlight-color: rgb(21 94 117);
+            --background-color: #0a0a0a;
+        }
+
+        body {
+            font-family: 'Space Mono';
+            font-weight: normal;
+            color: var(--main-color);
+            background-color: var(--background-color);
+
+            height: 100vh;
+            display: flex;
+            padding: 0;
+            margin: 0;
+        }
+
+        input[type="range"] {
+            appearance: none;
+            background-color: var(--background-color);
+            border: solid 2px var(--main-color);
+            box-sizing: border-box;
             width: 100%;
         }
 
-        .row {
-            display: grid;
-            grid-auto-flow: column;
-            grid-template-columns: 120px 100px 100px;
-            gap: 8px;
-            margin-bottom: 4px;
+        input[type="range"]::-webkit-slider-thumb {
+            appearance: none;
+            width: 16px;
+            height: 20px;
+            border: solid 3px var(--main-color);
+            background-color: var(--main-color);
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        #visualization {
+            flex-grow: 1;
+        }
+
+        .sidebar {
+            box-sizing: border-box;
+            width: 24rem;
+            padding: 16px;
+        }
+
+        .connection-status {
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            border: solid 2px var(--main-color);
+            background-color: transparent;
+            margin-right: 6px;
+        }
+
+        .connection-status.connected {
+            background-color: var(--main-color);
+        }
+
+        .connection-status.connected.inverted {
+            background-color: var(--highlight-color);
+            border-color: var(--highlight-color);
+        }
+
+        .logo {
+            font-weight: bold;
+            font-size: 0.75rem;
+            line-height: 1rem;
+            letter-spacing: 0.025em;
+            margin-bottom: 16px;
+        }
+
+        .host-connection {
+            display: flex;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .hostname {
+            text-transform: uppercase;
+        }
+
+        .sidebar-section-container {
+            margin: 1rem 0;
+        }
+
+        .sidebar-section-title {
+            text-transform: uppercase;
+            font-size: 1.125rem;
+            line-height: 2;
+        }
+
+        .sidebar-section {
+            border: solid 2px var(--main-color);
+        }
+
+        .sidebar-section-item {
+            display: flex;
+            align-items: center;
+            padding: 0.25rem 0.75rem;
+        }
+
+        .sidebar-section-item {
+            border-bottom: solid 2px var(--main-color);
+            cursor: pointer;
+        }
+
+        .sidebar-section-item.disabled {
+            cursor: default;
+        }
+
+        .sidebar-section-item.selected {
+            cursor: default;
+            color: black;
+            background-color: var(--main-color);
+        }
+
+        .sidebar-section-item:last-child {
+            border: none;
+        }
+
+        .sidebar-section-item.disabled:hover {
+            background-color: var(--background-color);
+        }
+
+        .sidebar-section-item.selected:hover {
+            background-color: var(--main-color);
+        }
+
+        .sidebar-section-item:hover {
+            background-color: var(--highlight-color);
+        }
+
+        #hand-details {
+            padding-top: 16px;
         }
     </style>
-    <script src="static/tetra.js" async></script>
+    <script src="static/tetra.js" type="module" async></script>
 </head>
 
 <body>
-    <div class="grid">
-        <div class="enabled row">
-            <div id="enabled-text">...</div>
-            <button id="toggle-enabled">Toggle</button>
-            <select name="grasp">
-                <option value="position">position</option>
-                {% for grasp in grasps %}
-                <option>{{grasp}}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <div class="torque-row row">
-            <div>Torque limit</div>
-            <div>
-                <input id="torque-limit" type="range" step="0.1"></input>
-                <button id="reset-torque">Reset</button>
-            </div>
-            <input name="grasp-value" type="range" step="0.1"></input>
-        </div>
-        {% for joint in joints %}
-        <div id="joint-{{joint['id']}}" class="joint-info" data-joint-id="{{joint['id']}}">
-            <div class="row">
-                <div class="joint-position">Position</div>
-                <div class="joint-position-value"></div>
-                <input class="goal-position-value" type="range" min="{{joint['min']}}" max="{{joint['max']}}"
-                    step="0.001"></input>
-            </div>
-            <div class="row">
-                <div class="joint-torque">Torque</div>
-                <div class="joint-torque-value"></div>
-            </div>
-            <div class="row">
-                <div>Temp</div>
-                <div class="joint-temp-value"></div>
-            </div>
-        </div>
-        {% endfor %}
-    </div>
+    <div id="visualization"></div>
+    <div class="sidebar">
+        <div class="logo">TETRA DYNAMICS</div>
 
+        <div class="host-connection">
+            Host:&nbsp;
+            <div id="host-connection-status" class="connection-status"></div>
+            <div class="hostname">{{hostname}}</div>
+        </div>
+
+        <div id="hand-selector" class="sidebar-section-container hidden">
+            <div id="hand-selector" class="sidebar-section">
+                <div class="sidebar-section-item" id="select-left-hand">
+                    <div id="left-connection-status" class="connection-status"></div>Left hand
+                </div>
+                <div class="sidebar-section-item" id="select-right-hand">
+                    <div id="right-connection-status" class="connection-status"></div>Right hand
+                </div>
+            </div>
+        </div>
+
+        <div id="hand-details" class="hidden">
+            <div class="sidebar-section-container">
+                <div class="sidebar-section-title">↓ Power</div>
+                <div class="sidebar-section">
+                    <div id="torque-on" class="sidebar-section-item">On</div>
+                    <div id="torque-off" class="sidebar-section-item">Off</div>
+                </div>
+            </div>
+
+            <div id="grasp-section" class="sidebar-section-container hidden">
+                <div class="sidebar-section-title">↓ Grasp</div>
+                <div class="sidebar-section" style="margin-bottom: 16px">
+                    <div id="grasp-none" class="sidebar-section-item">None</div>
+                    <div id="grasp-power" class="sidebar-section-item">Power</div>
+                    <div id="grasp-tip" class="sidebar-section-item">Tip</div>
+                </div>
+                <input id="grasp-value" class="slider" type="range" min="0" max="1" step="0.001" value="0"></input>
+            </div>
+            {% for joint in joints %}
+            <!--div id="joint-{{joint['id']}}" class="joint-info" data-joint-id="{{joint['id']}}">
+                <div class="row">
+                    <div class="joint-position">Position</div>
+                    <div class="joint-position-value"></div>
+                    <input class="goal-position-value" type="range" min="{{joint['min']}}" max="{{joint['max']}}"
+                        step="0.001"></input>
+                </div>
+                <div class="row">
+                    <div class="joint-torque">Torque</div>
+                    <div class="joint-torque-value"></div>
+                </div>
+                <div class="row">
+                    <div>Temp</div>
+                    <div class="joint-temp-value"></div>
+                </div>
+            </div-->
+            {% endfor %}
+        </div>
+    </div>
 </body>
 
 </html>

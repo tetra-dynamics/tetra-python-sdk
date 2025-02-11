@@ -24,8 +24,9 @@ def main():
 def run(args):
     if args.command == 'ui':
         with can.Bus() as bus:
-            hand = Hand(bus)
-            serve(args.port, [hand]) # TODO: make hands dynamics
+            left_hand = Hand(bus, can_id=50)
+            right_hand = Hand(bus, can_id=51)
+            serve(args.port, [left_hand, right_hand]) # TODO: make hands dynamics
     elif args.command == 'manus':
         setup_manus()
 
