@@ -1,1 +1,3 @@
-include mypackage/*.so
+include tetra/*.so
+include requirements.txt
+graft tetra/server

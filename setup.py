@@ -1,3 +1,4 @@
+import os
 from setuptools import setup, find_packages
 import sys
 
@@ -9,15 +10,16 @@ def read_requirements():
 
 def get_platform_specific_lib():
     if sys.platform == "linux":
-        return ["tetra/libManusSDK_Integrated.so", '70-manus-hid.rules']
+        return ["libManusSDK_Integrated.so", '70-manus-hid.rules']
     return []
 
 setup(
-    name="tetra",
-    version="0.0.1",
+    name="tetra-dynamics",
+    version="0.0.3",
+    platforms=["Linux"],
     packages=find_packages(),
     install_requires=read_requirements(),
-    package_data={'tetra': get_platform_specific_lib()},
+    package_data={'': ['server'] + get_platform_specific_lib()},
     include_package_data=True,
     entry_points={
         "console_scripts": [

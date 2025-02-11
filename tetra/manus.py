@@ -1,6 +1,7 @@
 import cffi
 import os
 import subprocess
+import threading
 
 import numpy as np
 
@@ -152,6 +153,7 @@ class Manus:
         lib_path = os.path.join(os.path.dirname(__file__), 'libManusSDK_Integrated.so')
         self.libmanus = ffi.dlopen(lib_path)
         self.ready = False
+        self.ready_cond = threading.Condition()
         self._rightHandIDs = set()
         self._leftHandIDs = set()
         self._pos = [[np.zeros(10), np.zeros(10)], [np.zeros(10), np.zeros(10)]]
@@ -213,7 +215,8 @@ class Manus:
             self._pos_idx = new_pos_idx
             if not self.ready:
                 self.ready = True
-                print('ready')
+                with self.ready_cond:
+                    self.ready_cond.notify()
 
         self._onErgonomicsData = onErgonomicsData
 
@@ -234,6 +237,10 @@ class Manus:
         self.libmanus.ManusHost_Init(manus_host)
         res = self.libmanus.CoreSdk_ConnectToHost(manus_host[0])
         self._check_manus_status(res, 'CoreSdk_ConnectToHost error')
+
+        if not self.ready:
+            with self.ready_cond:
+                self.ready_cond.wait()
 
     def disconnect(self):
         res = self.libmanus.CoreSdk_ShutDown()
