@@ -1,3 +1,5 @@
+# This example shows controlling a left and a right hand using Manus gloves
+
 import time
 
 import can
@@ -11,10 +13,10 @@ def main():
         right_hand = tetra.Hand(bus, side='right')
         with tetra.Manus() as manus:
             try:
+                input('press enter to start teleoperation')
+
                 left_hand.enable()
                 right_hand.enable()
-
-                input('press enter to start teleoperation')
 
                 while True:
                     start = time.monotonic()
