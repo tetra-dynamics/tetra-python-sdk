@@ -1,4 +1,4 @@
-from dataclasses import asdict, dataclass
+from dataclasses import asdict
 import json
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import os
@@ -131,6 +131,3 @@ def serve(port: int, hands: List[Hand]):
     httpd = TetraServer(server_address, TetraRequestHandler, api)
     print(f"Serving on port {port}")
     httpd.serve_forever()
-
-if __name__ == "__main__":
-    main()

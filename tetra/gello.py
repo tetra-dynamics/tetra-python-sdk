@@ -11,7 +11,7 @@ all_open_devices = set()
 class Gello:
     def __init__(self, side):
         if side not in ('left', 'right'):
-            raise ArgumentError('side must be "left" or "right"')
+            raise ValueError('side must be "left" or "right"')
 
         self.side = side
         if side == 'left':
@@ -45,7 +45,7 @@ class Gello:
             self.client = feetech.Client(path)
             self.client.connect()
             try:
-                pos = self.client.read_present_position(self.motor_ids[-1])
+                _ = self.client.read_present_position(self.motor_ids[-1])
                 found_servo = True
             except Exception:
                 pass
@@ -77,7 +77,7 @@ class Gello:
             motor_id = self.motor_ids[i]
             try:
                 pos = self.client.read_present_position(motor_id)
-            except:
+            except Exception:
                 if self.previous_joint_angles is not None:
                     #print(f'using previous joint angles for motor {motor_id}')
                     pos = self.previous_joint_angles[i]

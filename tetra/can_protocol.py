@@ -1,6 +1,5 @@
 import enum
 import math
-import struct
 
 import can
 import numpy as np

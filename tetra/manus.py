@@ -336,7 +336,7 @@ class Manus:
             nonlocal skel_nodes
             nonlocal skel_nodes_len
             for skel_idx in range(skel_info.skeletonsCount):
-                res = self.libmanus.CoreSdk_GetRawSkeletonInfo(skel_idx, raw_skel_info);
+                res = self.libmanus.CoreSdk_GetRawSkeletonInfo(skel_idx, raw_skel_info)
                 if res != 0:
                     print(f'CoreSdk_GetRawSkeletonInfo error: {res}')
                     continue
@@ -450,7 +450,8 @@ class Manus:
 
         # normalize joints so hand is flat (on x/y plane) and facing forward (+x direction)
         transform = hand_flat_and_forward_transform(index_mcp_pos, ring_mcp_pos, wrist_pos)
-        transformer = lambda x: quat.rotate_vector(x, transform)
+        def transformer(x):
+            return quat.rotate_vector(x, transform)
         skel_pos = np.apply_along_axis(transformer, axis=1, arr=skel_pos)
 
         # find thumb vector

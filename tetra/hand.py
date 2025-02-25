@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List, Literal
+from typing import Literal
 
 import can
 import numpy as np
@@ -45,7 +45,7 @@ class Hand:
                     is_right = None
                     try:
                         is_right = protocol.get_side()
-                    except TimeoutError as e:
+                    except TimeoutError:
                         pass
 
                     if is_right is not None:
