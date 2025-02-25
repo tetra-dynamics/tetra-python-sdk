@@ -15,7 +15,7 @@ def get_platform_specific_lib():
 
 setup(
     name="tetra-dynamics",
-    version="0.0.3",
+    version="0.0.4",
     platforms=["Linux"],
     packages=find_packages(),
     install_requires=read_requirements(),

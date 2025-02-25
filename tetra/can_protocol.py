@@ -25,6 +25,8 @@ class ParamType(enum.Enum):
     PresentPosition = 7
     Torque = 8
     Temp = 9
+    Proportional = 10
+    Time = 11
 
 single_byte_params = set([ParamType.CANID, ParamType.TorqueEnabled, ParamType.Temp])
 
@@ -44,7 +46,7 @@ class CANProtocol:
         self.priority = priority
 
         self.num_joints = num_joints
-        self.can_timeout = 1
+        self.can_timeout = 0.5
 
     def enable(self):
         self._write_param(ParamType.TorqueEnabled, 1)
@@ -67,6 +69,9 @@ class CANProtocol:
     def update_can_id(self, new_can_id):
         self._write_param(ParamType.CANID, new_can_id, resp_hand_can_id=new_can_id)
         self.hand_can_id = new_can_id
+
+    def get_start_time(self):
+        return self._read_param(ParamType.Time) / 10
 
     def get_joint_positions(self):
         return self._read_joint_params(ParamType.PresentPosition) / 1000
@@ -93,6 +98,9 @@ class CANProtocol:
     def get_joint_temps(self):
         res = self._read_joint_params(ParamType.Temp)
         return res / 10
+
+    def set_joint_proportional(self, joint_id, value):
+        self._write_joint_params(ParamType.Proportional, np.array([value]), joint_id-1)
 
     def _param_arb_id(self, message_type: MessageType, param_type: ParamType, target_can_id: int, source_can_id: int):
         second_byte = (param_type.value & 0b11111) | ((message_type.value & 0b111) << 5)

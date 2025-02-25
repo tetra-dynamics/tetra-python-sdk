@@ -1,2 +1,4 @@
 __pycache__
-tetra.egg-info/
+tetra_dynamics.egg-info/
+build
+dist

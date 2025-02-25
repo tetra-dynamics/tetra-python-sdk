@@ -1,3 +1,4 @@
 include tetra/*.so
+include tetra/*.urdf
 include requirements.txt
 graft tetra/server

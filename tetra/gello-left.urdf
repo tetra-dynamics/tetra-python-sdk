@@ -1,0 +1,433 @@
+<robot name="onshape">
+<link name="1l">
+<visual>
+<origin xyz="0.032794658465675544101 0.0015176307334959053541 0.074360392026002891663" rpy="-1.6653345369377422062e-16 -2.2776579365114154818e-16 -1.570796326794896336" />
+<geometry>
+<mesh filename="package:///base.stl"/>
+</geometry>
+<material name="base_material">
+<color rgba="0.76862745098039220171 0.88627450980392152857 0.95294117647058818044 1.0"/>
+</material>
+</visual>
+<collision>
+<origin xyz="0.032794658465675544101 0.0015176307334959053541 0.074360392026002891663" rpy="-1.6653345369377422062e-16 -2.2776579365114154818e-16 -1.570796326794896336" />
+<geometry>
+<mesh filename="package:///base.stl"/>
+</geometry>
+</collision>
+<visual>
+<origin xyz="0.032794658465675544101 0.0073076307334959157702 0.1041603920260028987" rpy="1.6653345369377422062e-16 2.2776579365114154818e-16 1.57079632679489678" />
+<geometry>
+<mesh filename="package:///91116a440_18_8_stainless_steel_oversized_washer.stl"/>
+</geometry>
+<material name="91116a440_18-8_stainless_steel_oversized_washer_material">
+<color rgba="0.98039215686274505668 0.71372549019607844922 0.0039215686274509803377 1.0"/>
+</material>
+</visual>
+<collision>
+<origin xyz="0.032794658465675544101 0.0073076307334959157702 0.1041603920260028987" rpy="1.6653345369377422062e-16 2.2776579365114154818e-16 1.57079632679489678" />
+<geometry>
+<mesh filename="package:///91116a440_18_8_stainless_steel_oversized_washer.stl"/>
+</geometry>
+</collision>
+<visual>
+<origin xyz="0.032794658465675544101 0.0073076307334959227091 0.11016039202600290403" rpy="-3.141592653589793116 2.2776579365114154818e-16 1.57079632679489678" />
+<geometry>
+<mesh filename="package:///part_1.stl"/>
+</geometry>
+<material name="part_1_material">
+<color rgba="0.61568627450980395466 0.81176470588235294379 0.92941176470588238168 1.0"/>
+</material>
+</visual>
+<collision>
+<origin xyz="0.032794658465675544101 0.0073076307334959227091 0.11016039202600290403" rpy="-3.141592653589793116 2.2776579365114154818e-16 1.57079632679489678" />
+<geometry>
+<mesh filename="package:///part_1.stl"/>
+</geometry>
+</collision>
+<visual>
+<origin xyz="0.032794658465675544101 0.0015176307334958984152 0.074360392026002891663" rpy="1.6653345369377422062e-16 2.2776579365114154818e-16 1.57079632679489678" />
+<geometry>
+<mesh filename="package:///sts3032.stl"/>
+</geometry>
+<material name="sts3032_material">
+<color rgba="0.61568627450980395466 0.81176470588235294379 0.92941176470588238168 1.0"/>
+</material>
+</visual>
+<collision>
+<origin xyz="0.032794658465675544101 0.0015176307334958984152 0.074360392026002891663" rpy="1.6653345369377422062e-16 2.2776579365114154818e-16 1.57079632679489678" />
+<geometry>
+<mesh filename="package:///sts3032.stl"/>
+</geometry>
+</collision>
+<visual>
+<origin xyz="0.032794658465675544101 0.0015176307334958984152 0.073960392026002894084" rpy="1.6653345369377422062e-16 2.2776579365114154818e-16 1.57079632679489678" />
+<geometry>
+<mesh filename="package:///servo_horn_disc.stl"/>
+</geometry>
+<material name="servo_horn_disc_material">
+<color rgba="0.64705882352941179736 0.64705882352941179736 0.64705882352941179736 1.0"/>
+</material>
+</visual>
+<collision>
+<origin xyz="0.032794658465675544101 0.0015176307334958984152 0.073960392026002894084" rpy="1.6653345369377422062e-16 2.2776579365114154818e-16 1.57079632679489678" />
+<geometry>
+<mesh filename="package:///servo_horn_disc.stl"/>
+</geometry>
+</collision>
+<inertial>
+<origin xyz="0 0 0" rpy="0 0 0"/>
+<mass value="0" />
+<inertia ixx="0" ixy="0"  ixz="0" iyy="0" iyz="0" izz="0" />
+</inertial>
+</link>
+
+<link name="2l">
+<visual>
+<origin xyz="-0.036490000000000001601 6.9388939039072283776e-18 0.032900000000000012568" rpy="3.141592653589793116 5.9164567891575885406e-31 -5.4725576897232053463e-33" />
+<geometry>
+<mesh filename="package:///1_l.stl"/>
+</geometry>
+<material name="1_l_material">
+<color rgba="0.2313725490196078538 0.38039215686274507888 0.7058823529411765163 1.0"/>
+</material>
+</visual>
+<collision>
+<origin xyz="-0.036490000000000001601 6.9388939039072283776e-18 0.032900000000000012568" rpy="3.141592653589793116 5.9164567891575885406e-31 -5.4725576897232053463e-33" />
+<geometry>
+<mesh filename="package:///1_l.stl"/>
+</geometry>
+</collision>
+<visual>
+<origin xyz="-5.0306980803327405738e-17 -0.0098249999999998269273 -0.050409999999999982601" rpy="-1.570796326794896558 1.5707963267948958919 0" />
+<geometry>
+<mesh filename="package:///sts3032.stl"/>
+</geometry>
+<material name="sts3032_material">
+<color rgba="0.61568627450980395466 0.81176470588235294379 0.92941176470588238168 1.0"/>
+</material>
+</visual>
+<collision>
+<origin xyz="-5.0306980803327405738e-17 -0.0098249999999998269273 -0.050409999999999982601" rpy="-1.570796326794896558 1.5707963267948958919 0" />
+<geometry>
+<mesh filename="package:///sts3032.stl"/>
+</geometry>
+</collision>
+<visual>
+<origin xyz="-4.9439619065339002191e-17 -0.010224999999999810629 -0.050409999999999982601" rpy="-1.570796326794896558 1.5707963267948958919 0" />
+<geometry>
+<mesh filename="package:///servo_horn_disc.stl"/>
+</geometry>
+<material name="servo_horn_disc_material">
+<color rgba="0.64705882352941179736 0.64705882352941179736 0.64705882352941179736 1.0"/>
+</material>
+</visual>
+<collision>
+<origin xyz="-4.9439619065339002191e-17 -0.010224999999999810629 -0.050409999999999982601" rpy="-1.570796326794896558 1.5707963267948958919 0" />
+<geometry>
+<mesh filename="package:///servo_horn_disc.stl"/>
+</geometry>
+</collision>
+<inertial>
+<origin xyz="-0.00097462412473846304645 0.008598546982176054343 -0.020232802089327338313" rpy="0 0 0"/>
+<mass value="0.01926664587663814987" />
+<inertia ixx="9.4510649060652295728e-06" ixy="1.1159808350972240592e-07"  ixz="-5.8645337937226493418e-07" iyy="9.6073738988817618142e-06" iyz="1.8535842441470958954e-06" izz="3.025834978261547193e-06" />
+</inertial>
+</link>
+
+<link name="3l">
+<visual>
+<origin xyz="-0.0057900000000000034772 -0.089099999999999998646 -0.026250000000000002498" rpy="-1.570796326794896558 -1.13011301366567189e-16 0" />
+<geometry>
+<mesh filename="package:///2.stl"/>
+</geometry>
+<material name="2_material">
+<color rgba="0.97254901960784312376 0.52941176470588235947 0.0039215686274509803377 1.0"/>
+</material>
+</visual>
+<collision>
+<origin xyz="-0.0057900000000000034772 -0.089099999999999998646 -0.026250000000000002498" rpy="-1.570796326794896558 -1.13011301366567189e-16 0" />
+<geometry>
+<mesh filename="package:///2.stl"/>
+</geometry>
+</collision>
+<visual>
+<origin xyz="-0.023350000000000082495 0.27066000000000001169 0.022000000000000095868" rpy="-3.141592653589793116 1.232595164407830727e-31 1.570796326794896558" />
+<geometry>
+<mesh filename="package:///sts3032.stl"/>
+</geometry>
+<material name="sts3032_material">
+<color rgba="0.61568627450980395466 0.81176470588235294379 0.92941176470588238168 1.0"/>
+</material>
+</visual>
+<collision>
+<origin xyz="-0.023350000000000082495 0.27066000000000001169 0.022000000000000095868" rpy="-3.141592653589793116 1.232595164407830727e-31 1.570796326794896558" />
+<geometry>
+<mesh filename="package:///sts3032.stl"/>
+</geometry>
+</collision>
+<visual>
+<origin xyz="-0.023350000000000082495 0.27066000000000001169 0.02240000000000007957" rpy="-3.141592653589793116 1.232595164407830727e-31 1.570796326794896558" />
+<geometry>
+<mesh filename="package:///servo_horn_disc.stl"/>
+</geometry>
+<material name="servo_horn_disc_material">
+<color rgba="0.64705882352941179736 0.64705882352941179736 0.64705882352941179736 1.0"/>
+</material>
+</visual>
+<collision>
+<origin xyz="-0.023350000000000082495 0.27066000000000001169 0.02240000000000007957" rpy="-3.141592653589793116 1.232595164407830727e-31 1.570796326794896558" />
+<geometry>
+<mesh filename="package:///servo_horn_disc.stl"/>
+</geometry>
+</collision>
+<inertial>
+<origin xyz="0 0 0" rpy="0 0 0"/>
+<mass value="0" />
+<inertia ixx="0" ixy="0"  ixz="0" iyy="0" iyz="0" izz="0" />
+</inertial>
+</link>
+
+<link name="4l">
+<visual>
+<origin xyz="0.017560000000000103304 -0.36554999999999998606 -0.040325000000000006672" rpy="-1.570796326794896558 -1.13011301366567189e-16 0" />
+<geometry>
+<mesh filename="package:///3_l.stl"/>
+</geometry>
+<material name="3_l_material">
+<color rgba="0.98039215686274505668 0.71372549019607844922 0.0039215686274509803377 1.0"/>
+</material>
+</visual>
+<collision>
+<origin xyz="0.017560000000000103304 -0.36554999999999998606 -0.040325000000000006672" rpy="-1.570796326794896558 -1.13011301366567189e-16 0" />
+<geometry>
+<mesh filename="package:///3_l.stl"/>
+</geometry>
+</collision>
+<visual>
+<origin xyz="-0.21664999999999995373 0.005790000000000017355 0.021587499999999974765" rpy="1.570796326794896558 -0 -1.570796326794896558" />
+<geometry>
+<mesh filename="package:///sts3032.stl"/>
+</geometry>
+<material name="sts3032_material">
+<color rgba="0.61568627450980395466 0.81176470588235294379 0.92941176470588238168 1.0"/>
+</material>
+</visual>
+<collision>
+<origin xyz="-0.21664999999999995373 0.005790000000000017355 0.021587499999999974765" rpy="1.570796326794896558 -0 -1.570796326794896558" />
+<geometry>
+<mesh filename="package:///sts3032.stl"/>
+</geometry>
+</collision>
+<visual>
+<origin xyz="-0.21624999999999994227 0.005790000000000017355 0.021587499999999978234" rpy="1.570796326794896558 -0 -1.570796326794896558" />
+<geometry>
+<mesh filename="package:///servo_horn_disc.stl"/>
+</geometry>
+<material name="servo_horn_disc_material">
+<color rgba="0.64705882352941179736 0.64705882352941179736 0.64705882352941179736 1.0"/>
+</material>
+</visual>
+<collision>
+<origin xyz="-0.21624999999999994227 0.005790000000000017355 0.021587499999999978234" rpy="1.570796326794896558 -0 -1.570796326794896558" />
+<geometry>
+<mesh filename="package:///servo_horn_disc.stl"/>
+</geometry>
+</collision>
+<inertial>
+<origin xyz="0 0 0" rpy="0 0 0"/>
+<mass value="0" />
+<inertia ixx="0" ixy="0"  ixz="0" iyy="0" iyz="0" izz="0" />
+</inertial>
+</link>
+
+<link name="5l">
+<visual>
+<origin xyz="0.10658749999999998781 -0.36554999999999998606 0.2671100000000000696" rpy="-1.570796326794896558 -1.570796326794896336 0" />
+<geometry>
+<mesh filename="package:///4_l.stl"/>
+</geometry>
+<material name="4_l_material">
+<color rgba="0.64705882352941179736 0.64705882352941179736 0.64705882352941179736 1.0"/>
+</material>
+</visual>
+<collision>
+<origin xyz="0.10658749999999998781 -0.36554999999999998606 0.2671100000000000696" rpy="-1.570796326794896558 -1.570796326794896336 0" />
+<geometry>
+<mesh filename="package:///4_l.stl"/>
+</geometry>
+</collision>
+<visual>
+<origin xyz="0.021924999999999906369 0 -0.044710000000000194031" rpy="3.2442967569156678251e-16 1.570796326794896336 0" />
+<geometry>
+<mesh filename="package:///sts3032.stl"/>
+</geometry>
+<material name="sts3032_material">
+<color rgba="0.61568627450980395466 0.81176470588235294379 0.92941176470588238168 1.0"/>
+</material>
+</visual>
+<collision>
+<origin xyz="0.021924999999999906369 0 -0.044710000000000194031" rpy="3.2442967569156678251e-16 1.570796326794896336 0" />
+<geometry>
+<mesh filename="package:///sts3032.stl"/>
+</geometry>
+</collision>
+<visual>
+<origin xyz="0.02152499999999990879 0 -0.04471000000000013852" rpy="3.2442967569156678251e-16 1.570796326794896336 0" />
+<geometry>
+<mesh filename="package:///servo_horn_disc.stl"/>
+</geometry>
+<material name="servo_horn_disc_material">
+<color rgba="0.64705882352941179736 0.64705882352941179736 0.64705882352941179736 1.0"/>
+</material>
+</visual>
+<collision>
+<origin xyz="0.02152499999999990879 0 -0.04471000000000013852" rpy="3.2442967569156678251e-16 1.570796326794896336 0" />
+<geometry>
+<mesh filename="package:///servo_horn_disc.stl"/>
+</geometry>
+</collision>
+<inertial>
+<origin xyz="0 0 0" rpy="0 0 0"/>
+<mass value="0" />
+<inertia ixx="0" ixy="0"  ixz="0" iyy="0" iyz="0" izz="0" />
+</inertial>
+</link>
+
+<link name="6l">
+<visual>
+<origin xyz="0.31761000000000028098 -0.36555000000000004157 -0.073562500000000002887" rpy="-1.570796326794896558 -1.13011301366567189e-16 0" />
+<geometry>
+<mesh filename="package:///5_l.stl"/>
+</geometry>
+<material name="5_l_material">
+<color rgba="0.91764705882352937127 0.91764705882352937127 0.91764705882352937127 1.0"/>
+</material>
+</visual>
+<collision>
+<origin xyz="0.31761000000000028098 -0.36555000000000004157 -0.073562500000000002887" rpy="-1.570796326794896558 -1.13011301366567189e-16 0" />
+<geometry>
+<mesh filename="package:///5_l.stl"/>
+</geometry>
+</collision>
+<visual>
+<origin xyz="-0.031649999999999844924 -0.032650000000000067857 0.060615000000000140989" rpy="1.57079632679489678 1.5707963267948961139 0" />
+<geometry>
+<mesh filename="package:///sts3032.stl"/>
+</geometry>
+<material name="sts3032_material">
+<color rgba="0.61568627450980395466 0.81176470588235294379 0.92941176470588238168 1.0"/>
+</material>
+</visual>
+<collision>
+<origin xyz="-0.031649999999999844924 -0.032650000000000067857 0.060615000000000140989" rpy="1.57079632679489678 1.5707963267948961139 0" />
+<geometry>
+<mesh filename="package:///sts3032.stl"/>
+</geometry>
+</collision>
+<visual>
+<origin xyz="-0.031649999999999844924 -0.03225000000000011191 0.060615000000000140989" rpy="1.57079632679489678 1.5707963267948961139 0" />
+<geometry>
+<mesh filename="package:///servo_horn_disc.stl"/>
+</geometry>
+<material name="servo_horn_disc_material">
+<color rgba="0.64705882352941179736 0.64705882352941179736 0.64705882352941179736 1.0"/>
+</material>
+</visual>
+<collision>
+<origin xyz="-0.031649999999999844924 -0.03225000000000011191 0.060615000000000140989" rpy="1.57079632679489678 1.5707963267948961139 0" />
+<geometry>
+<mesh filename="package:///servo_horn_disc.stl"/>
+</geometry>
+</collision>
+<inertial>
+<origin xyz="0 0 0" rpy="0 0 0"/>
+<mass value="0" />
+<inertia ixx="0" ixy="0"  ixz="0" iyy="0" iyz="0" izz="0" />
+</inertial>
+</link>
+
+<link name="gopromount_l">
+<visual>
+<origin xyz="0.37996000000000007546 0.01238750000000010329 -0.29682500000000000551" rpy="0 -0 2.8034090889793386879e-32" />
+<geometry>
+<mesh filename="package:///gopromount_l.stl"/>
+</geometry>
+<material name="gopromount_l_material">
+<color rgba="0.64705882352941179736 0.64705882352941179736 0.64705882352941179736 1.0"/>
+</material>
+</visual>
+<collision>
+<origin xyz="0.37996000000000007546 0.01238750000000010329 -0.29682500000000000551" rpy="0 -0 2.8034090889793386879e-32" />
+<geometry>
+<mesh filename="package:///gopromount_l.stl"/>
+</geometry>
+</collision>
+<inertial>
+<origin xyz="0 0 0" rpy="0 0 0"/>
+<mass value="0" />
+<inertia ixx="0" ixy="0"  ixz="0" iyy="0" iyz="0" izz="0" />
+</inertial>
+</link>
+
+<joint name="6" type="revolute">
+<origin xyz="-0.031650000000000066969 -0.065150000000000041211 0.054825000000000054245" rpy="1.570796326794896558 1.5866786711865396986e-17 3.141592653589793116" />
+<parent link="6l" />
+<child link="gopromount_l" />
+<axis xyz="0 0 1"/>
+<limit effort="1" velocity="20" />
+<joint_properties friction="0.0"/>
+</joint>
+
+<joint name="5" type="revolute">
+<origin xyz="0.054425000000000015032 5.5511151231257827021e-17 -0.050500000000000211386" rpy="-2.4651903288156618919e-32 -1.570796326794896558 0" />
+<parent link="5l" />
+<child link="6l" />
+<axis xyz="0 0 1"/>
+<limit effort="1" velocity="20" />
+<joint_properties friction="0.0"/>
+</joint>
+
+<joint name="4" type="revolute">
+<origin xyz="-0.24914999999999998259 0 0.02158749999999987762" rpy="-4.9303806576313237838e-32 1.570796326794896558 0" />
+<parent link="4l" />
+<child link="5l" />
+<axis xyz="0 0 1"/>
+<limit effort="1" velocity="20" />
+<joint_properties friction="0.0"/>
+</joint>
+
+<joint name="3" type="revolute">
+<origin xyz="-0.023350000000000079026 0.27644999999999997353 -0.010499999999999896569" rpy="4.9303806576313259734e-32 2.2524931719504640392e-31 0" />
+<parent link="3l" />
+<child link="4l" />
+<axis xyz="0 0 1"/>
+<limit effort="1" velocity="20" />
+<joint_properties friction="0.0"/>
+</joint>
+
+<joint name="2" type="revolute">
+<origin xyz="-3.4694469519536141888e-17 0.022674999999999896627 -0.056199999999999999956" rpy="-1.57079632679489678 -2.4599427120222544936e-16 -3.1415926535897917837" />
+<parent link="2l" />
+<child link="3l" />
+<axis xyz="0 0 1"/>
+<limit effort="1" velocity="20" />
+<joint_properties friction="0.0"/>
+</joint>
+
+<joint name="1" type="revolute">
+<origin xyz="0.032794658465675544101 0.0073076307334959261786 0.11016039202600289015" rpy="3.1415926535897926719 4.1343810392342985243e-16 -1.570796326794896336" />
+<parent link="1l" />
+<child link="2l" />
+<axis xyz="0 0 1"/>
+<limit effort="1" velocity="20" />
+<joint_properties friction="0.0"/>
+</joint>
+
+<link name="world" />
+<joint name="base_fixed" type="fixed">
+    <parent link="world"/>
+    <child link="1l"/>
+</joint>
+
+</robot>
