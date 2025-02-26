@@ -4,6 +4,7 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 import os
 import socket
 from typing import List
+import webbrowser
 
 import jinja2
 
@@ -125,9 +126,24 @@ class TetraServer(HTTPServer):
         self.hostname = socket.gethostname()
         super().__init__(server_address, handler_class)
 
+def is_local_session():
+    return os.getenv("SSH_CONNECTION") is None and os.getenv("DISPLAY") is not None
+
+def get_local_ips():
+    """Get all local IP addresses of the machine."""
+    host_name = socket.gethostname()
+    return socket.gethostbyname_ex(host_name)[2]
+
 def serve(port: int, hands: List[Hand]):
     api = TetraAPI(hands)
     server_address = ('', port)
     httpd = TetraServer(server_address, TetraRequestHandler, api)
-    print(f"Serving on port {port}")
+    if is_local_session():
+        url = f'http://localhost:{port}'
+        print('Now serving at', url)
+        webbrowser.open(url)
+    else:
+        ips = get_local_ips()
+        if len(ips) > 0:
+            print(f'Now serving at http://{ips[0]}:{port}')
     httpd.serve_forever()
