@@ -14,14 +14,14 @@ class JointConfig:
 
 
 grasps = {
-    'tip': np.array([[0, 40, 15, 8, 25, 8, 25, 97.5, 28.3, 20],
-                     [0, 80.4, 15, 8, 25, 8, 25, 97.5, 40.8, 23]]),
-    'power': np.array([[0, 18.5, 20.4, 4.7, 4.5, 7.2, 13.6, 100, -2.7, 23.4],
-                       [0, 76.9, 32.4, 74.1, 18.4, 76.1, 16.3, 100, 46.5, 27.5]])
+    'tip': np.array([[97.5, 28.3, 20, 0, 40, 15, 8, 25, 8, 25],
+                     [97.5, 40.8, 23, 0, 80.4, 15, 8, 25, 8, 25]]),
+    'power': np.array([[100, -2.7, 23.4, 0, 18.5, 20.4, 4.7, 4.5, 7.2, 13.6],
+                       [100, 46.5, 27.5, 0, 76.9, 32.4, 74.1, 18.4, 76.1, 16.3]])
 }
 overhead_grasp = grasps['power'].copy()
-overhead_grasp[:,7] = 120
-overhead_grasp[:,8] = 6
+overhead_grasp[:,0] = 120
+overhead_grasp[:,1] = 6
 grasps['overhead'] = overhead_grasp
 
 for grasp_name in grasps:
@@ -70,7 +70,7 @@ class Hand:
         for joint_id in range(1, num_joints+1):
             min = 0
             max = np.pi / 2
-            if joint_id == 7:
+            if joint_id == 1:
                 max = 120 * np.pi / 180 # XXX make more accurate
             joint_configs.append(JointConfig(joint_id, min, max))
         self.joint_configs = joint_configs

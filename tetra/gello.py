@@ -80,11 +80,10 @@ class Gello:
             except Exception:
                 if self.previous_joint_angles is not None:
                     #print(f'using previous joint angles for motor {motor_id}')
-                    pos = self.previous_joint_angles[i]
+                    pos = self.previous_joint_angles[i + 1]
             if pos >= np.pi:
                 pos -= 2 * np.pi
             joint_angles[i + 1] = pos
-        #print(f'{joint_angles=}')
 
         self.previous_joint_angles = joint_angles
         self.robot.setConfig(joint_angles)

@@ -13,10 +13,10 @@ class ManusException(Exception):
 
 class Manus:
     def __init__(self):
-        self.offsets = np.array([0, 0, 0, 0, 0, 0, 0, np.pi * 30 / 180, 0, 0])
+        self.offsets = np.array([np.pi * 30 / 180, 0, 0, 0, 0, 0, 0, 0, 0, 0])
         mcp_scale = 1.2
         pip_scale = 1.6
-        self.scale = np.array([1.5, mcp_scale, pip_scale, mcp_scale, pip_scale, mcp_scale, pip_scale, 1.8, 1, 1])
+        self.scale = np.array([1.8, 1, 1, 1.5, mcp_scale, pip_scale, mcp_scale, pip_scale, mcp_scale, pip_scale])
 
         ffi = cffi.FFI()
         ffi.cdef('''
@@ -240,7 +240,6 @@ class Manus:
         self._rightHandIDs = set()
         self._leftHandIDs = set()
         self._skeleton_data = [np.zeros([25, 3]), np.zeros([25, 3])]
-        self._skeleton_mapping = None
         self._pos = [[np.zeros(10), np.zeros(10)], [np.zeros(10), np.zeros(10)]]
         self._pos_idx = 0
         self._splay_offsets = [None, None]
@@ -350,19 +349,6 @@ class Manus:
                 elif raw_skel_info.gloveId not in self._leftHandIDs:
                     print('unknown glove id')
 
-                if self._skeleton_mapping is None:
-                    self._skeleton_mapping = {}
-                    '''
-                    node_infos = self.ffi.new('struct NodeInfo[]', raw_skel_info.nodesCount)
-                    res = self.libmanus.CoreSdk_GetRawSkeletonNodeInfoArray(raw_skel_info.gloveId, node_infos, raw_skel_info.nodesCount)
-                    if res != 0:
-                        print(f'CoreSdk_GetRawSkeletonNodeInfoArray error: {res}')
-                        return
-                    for i in range(raw_skel_info.nodesCount):
-                        info = node_infos[i]
-                        print(f'{info.nodeId=} {info.chainType=} {info.fingerJointType=}')
-                    '''
-
                 if raw_skel_info.nodesCount > skel_nodes_len:
                     skel_nodes = self.ffi.new('struct SkeletonNode[]', raw_skel_info.nodesCount)
                     skel_nodes_len = raw_skel_info.nodesCount
@@ -430,11 +416,11 @@ class Manus:
         pos_adjusted = pos + self.offsets
 
         if self._splay_offsets[side_idx] is None:
-            splay = max(pos_adjusted[0], 0)
+            splay = max(pos_adjusted[3], 0)
             self._splay_offsets[side_idx] = splay
-        pos_adjusted[0] = max(0, pos_adjusted[0] - self._splay_offsets[side_idx])
+        pos_adjusted[3] = max(0, pos_adjusted[3] - self._splay_offsets[side_idx])
 
-        pos_adjusted[8] = self.get_thumb_angle(side)
+        pos_adjusted[1] = self.get_thumb_angle(side)
 
         for i in range(len(pos_adjusted)):
             if pos_adjusted[i] > 0:
