@@ -38,7 +38,7 @@ class Hand:
         if isinstance(can_bus, can.BusABC):
             if can_id is None:
                 wrong_side_found = False
-                for i in range(252):
+                for i in range(2): # previously 252, working around limitations of CAN
                     id_guess = 1 + ((i + 49) % 252)
                     protocol = CANProtocol(can_bus, id_guess)
                     protocol.can_timeout = 0.1

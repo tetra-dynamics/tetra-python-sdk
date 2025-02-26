@@ -225,4 +225,4 @@ class CANProtocol:
                 #print('not expected:', hex(resp.arbitration_id), hex(expected_arb_id))
                 pass
 
-        return None
+        raise TimeoutError('No CAN response received')
