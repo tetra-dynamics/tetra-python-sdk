@@ -338,6 +338,8 @@ class Manus:
             for skel_idx in range(skel_info.skeletonsCount):
                 res = self.libmanus.CoreSdk_GetRawSkeletonInfo(skel_idx, raw_skel_info)
                 if res != 0:
+                    if res == 5:
+                        return # This means the core SDK has been shut down
                     print(f'CoreSdk_GetRawSkeletonInfo error: {res}')
                     continue
 
@@ -356,6 +358,8 @@ class Manus:
 
                 res = self.libmanus.CoreSdk_GetRawSkeletonData(skel_idx, skel_nodes, raw_skel_info.nodesCount)
                 if res != 0:
+                    if res == 5:
+                        return # This means the core SDK has been shut down
                     print(f'CoreSdk_GetRawSkeletonData error: {res}')
                     continue
 
