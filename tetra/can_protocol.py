@@ -70,7 +70,7 @@ class CANProtocol:
         self.hand_can_id = new_can_id
 
     def get_start_time(self):
-        return self._read_param(ParamType.Time) / 10
+        return self._read_param(ParamType.Time)
 
     def get_joint_positions(self):
         return self._read_joint_params(ParamType.PresentPosition) / 1000

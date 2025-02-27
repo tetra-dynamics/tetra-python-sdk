@@ -243,6 +243,7 @@ class Manus:
         self._pos = [[np.zeros(10), np.zeros(10)], [np.zeros(10), np.zeros(10)]]
         self._pos_idx = 0
         self._splay_offsets = [None, None]
+        self._locked_thumb_rot = [None, None]
 
     def connect(self):
         res = self.libmanus.CoreSdk_InitializeIntegrated()
@@ -275,11 +276,11 @@ class Manus:
 
         self._splay_offsets = [None, None]
 
-        left_manus_idx = [4, 5, 6, 9, 10, 13, 14, 0, 2, 3]
+        left_manus_idx = [0, 2, 3, 4, 5, 6, 9, 10, 13, 14]
         left_dip_idx = [7, 11, 15]
-        right_manus_idx = [24, 25, 26, 29, 30, 33, 34, 20, 22, 23]
+        right_manus_idx = [20, 22, 23, 24, 25, 26, 29, 30, 33, 34]
         right_dip_idx = [27, 31, 35]
-        mcp_idx = [1, 3, 5]
+        mcp_idx = [4, 6, 8]
 
         @self.ffi.callback('void(struct ErgonomicsStream *)')
         def onErgonomicsData(ergoStream):
@@ -421,6 +422,15 @@ class Manus:
         pos_adjusted[3] = max(0, pos_adjusted[3] - self._splay_offsets[side_idx])
 
         pos_adjusted[1] = self.get_thumb_angle(side)
+
+        if pos_adjusted[1] < 0.3:
+            self._locked_thumb_rot[side_idx] = None
+        else:
+            locked_rot = self._locked_thumb_rot[side_idx]
+            if locked_rot is None:
+                self._locked_thumb_rot[side_idx] = pos_adjusted[0]
+            else:
+                pos_adjusted[0] = max(locked_rot, pos_adjusted[0])
 
         for i in range(len(pos_adjusted)):
             if pos_adjusted[i] > 0:
