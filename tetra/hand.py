@@ -17,7 +17,9 @@ grasps = {
     'tip': np.array([[97.5, 28.3, 20, 0, 40, 15, 8, 25, 8, 25],
                      [97.5, 40.8, 23, 0, 80.4, 15, 8, 25, 8, 25]]),
     'power': np.array([[100, -2.7, 23.4, 0, 18.5, 20.4, 4.7, 4.5, 7.2, 13.6],
-                       [100, 46.5, 27.5, 0, 76.9, 32.4, 74.1, 18.4, 76.1, 16.3]])
+                       [100, 46.5, 27.5, 0, 76.9, 32.4, 74.1, 18.4, 76.1, 16.3]]),
+    'extension': np.array([[100.0, 60, 10, 0, 0, 0, 0, 0, 0, 0],
+                           [100.0, 90, -15, 0, 45, 0, 45, 0, 45, 0]])
 }
 overhead_grasp = grasps['power'].copy()
 overhead_grasp[:,0] = 120
@@ -44,7 +46,7 @@ class Hand:
                     protocol.can_timeout = 0.1
                     is_right = None
                     try:
-                        is_right = protocol.get_side()
+                        is_right = protocol.get_hand_type() & 1
                     except TimeoutError:
                         pass
 
@@ -121,9 +123,11 @@ class Hand:
 
     def set_grasp_position(self, grasp_name: str, pos: float):
         '''Put the hand into a particular grasp, with the part of the grasp between 0 and 1'''
+        self.set_joint_positions(self.get_grasp_position(grasp_name, pos))
+
+    def get_grasp_position(self, grasp_name: str, pos: float):
         if pos < 0 or pos > 1:
             raise ValueError('position must be between 0 and 1')
 
         start, end = grasps[grasp_name]
-        res = start * (1 - pos) + end * pos
-        self.set_joint_positions(res)
+        return start * (1 - pos) + end * pos

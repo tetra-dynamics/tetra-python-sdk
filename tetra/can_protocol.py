@@ -56,7 +56,7 @@ class CANProtocol:
     def enabled(self):
         return self._read_param(ParamType.TorqueEnabled) != 0
 
-    def get_side(self):
+    def get_hand_type(self):
         return self._read_param(ParamType.HandType)
 
     def update_hand_type(self, side='left'):
