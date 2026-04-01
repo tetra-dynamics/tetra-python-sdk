@@ -26,6 +26,8 @@ class ParamType(enum.Enum):
     Temp = 9
     Proportional = 10
     Time = 11
+    PWM = 30
+    EncoderValue = 31
 
 single_byte_params = set([ParamType.CANID, ParamType.TorqueEnabled, ParamType.Temp])
 
@@ -138,9 +140,9 @@ class CANProtocol:
         data = self._recv(resp_arb_id)
         status = data[0]
         if status != 0:
-            raise Exception('Error writing param')
+            raise Exception(f'Error writing param {status}')
 
-    def _read_joint_params(self, param_type: ParamType, num_values: int = -1) -> np.ndarray:
+    def _read_joint_params(self, param_type: ParamType, num_values: int = -1, joint_offset: int = 0) -> np.ndarray:
         arb_id = self._param_arb_id(MessageType.ReadJointParam, param_type, self.hand_can_id, self.host_can_id)
         resp_arb_id = self._param_arb_id(MessageType.JointParamResp, param_type, self.host_can_id, self.hand_can_id)
 
@@ -151,8 +153,8 @@ class CANProtocol:
         chunk_size = 3 # TODO: can increase for CAN FD or 1 byte values
         num_chunks = math.ceil(num_values / chunk_size)
         for i in range(num_chunks):
-            idx = i * chunk_size
-            last_idx = min(num_values, idx + chunk_size)
+            idx = i * chunk_size + joint_offset
+            last_idx = min(joint_offset + num_values, idx + chunk_size)
             joint_mask = 0
             for j in range(idx, last_idx):
                 joint_mask |= 1 << j
@@ -164,7 +166,7 @@ class CANProtocol:
 
             for j in range(last_idx - idx):
                 value = self._bytes_to_int(resp[2 + 2 * j], resp[3 + 2 * j])
-                result[idx + j] = value
+                result[i * chunk_size + j] = value
             
         return result
 
