@@ -104,9 +104,13 @@ class CANProtocol:
         self._write_joint_params(ParamType.Proportional, np.array([value]), joint_id-1)
 
     def _param_arb_id(self, message_type: MessageType, param_type: ParamType, target_can_id: int, source_can_id: int):
-        second_byte = (param_type.value & 0b11111) | ((message_type.value & 0b111) << 5)
-        first_byte = ((message_type.value & 0b11000) >> 3) | self.priority << 2
-        return source_can_id | (target_can_id << 8) | second_byte << 16 | first_byte << 24
+        # Protocol layout (matches firmware hand_parse_can_message):
+        #   bits 16-22: paramType (7 bits, was 6)
+        #   bits 23-26: messageType (4 bits, was 5)
+        #   bits 27-31: priority (5 bits)
+        second_byte = (param_type.value & 0b1111111) | ((message_type.value & 0b1) << 7)
+        first_byte = ((message_type.value & 0b1110) >> 1) | (self.priority << 3)
+        return source_can_id | (target_can_id << 8) | (second_byte << 16) | (first_byte << 24)
 
     def _bytes_to_int(self, lsb, msb):
         # 2 byte numbers are transmitted in 2's complement, 1 byte values are always positive
