@@ -77,11 +77,15 @@ class CANProtocol:
     def get_joint_positions(self):
         return self._read_joint_params(ParamType.PresentPosition) / 1000
 
+    # TargetPosition wire scale: 100µrad units (×10000), ~0.0057°/LSB — finer
+    # than the 14-bit encoder. MUST match the firmware (hand.c ParamTargetPosition
+    # ÷10000) and the debugger's _TARGET_POS_SCALE. int16 range caps at ±3.27 rad
+    # (±187°), which covers any joint, so values are clipped to be safe.
     def set_joint_positions(self, values):
-        self._write_joint_params(ParamType.TargetPosition, values * 1000)
+        self._write_joint_params(ParamType.TargetPosition, np.clip(values * 10000, -32767, 32767))
 
     def set_single_joint_position(self, joint_id: int, value: float):
-        int_value = int(value * 1000)
+        int_value = int(max(-32767, min(32767, value * 10000)))
         self._write_joint_params(ParamType.TargetPosition, np.array([int_value]), joint_offset=joint_id-1)
 
     def get_torque_limit(self) -> float:
