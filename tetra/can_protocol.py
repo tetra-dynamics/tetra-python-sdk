@@ -28,6 +28,7 @@ class ParamType(enum.Enum):
     Time = 11
     PWM = 30
     EncoderValue = 31
+    MotorDirSign = 63   # per-motor PWM polarity (±1); read-back added to firmware
 
 single_byte_params = set([ParamType.CANID, ParamType.TorqueEnabled, ParamType.Temp])
 
