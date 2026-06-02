@@ -29,7 +29,7 @@ grasps['overhead'] = overhead_grasp
 for grasp_name in grasps:
     grasps[grasp_name] *= np.pi / 180
 
-num_joints = 10
+num_joints = 12
 
 class DeviceNotFoundError(Exception):
     """Raised when no CAN device can be found on the bus."""
@@ -62,7 +62,7 @@ class Hand:
                         message = f'No {side} hands found on the CAN bus'
                     raise DeviceNotFoundError(message)
 
-            self.protocol = CANProtocol(can_bus, can_id)
+            self.protocol = CANProtocol(can_bus, can_id, num_joints=num_joints)
         else:
             self.protocol = can_bus
 
