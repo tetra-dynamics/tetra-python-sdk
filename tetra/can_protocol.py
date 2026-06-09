@@ -1,5 +1,6 @@
 import enum
 import math
+import time
 
 import can
 import numpy as np
@@ -12,6 +13,10 @@ class MessageType(enum.Enum):
     WriteJointParam = 5
     JointParamResp = 6
     ZeroJoints = 7
+    # Firmware-initiated position telemetry (no request). The paramType
+    # field carries the chunk index; data = 2-byte joint mask + 3×int16 raw
+    # signed encoder counts. Enabled via ParamType.StreamPeriodMs.
+    StreamPositions = 8
 
 class ParamType(enum.Enum):
     NoParam = 0
@@ -29,6 +34,17 @@ class ParamType(enum.Enum):
     PWM = 30
     EncoderValue = 31
     MotorDirSign = 63   # per-motor PWM polarity (±1); read-back added to firmware
+    # Present position in 100 µrad wire units (×10000) — same scale as
+    # TargetPosition writes, lossless vs the 14-bit encoder. The legacy
+    # PresentPosition (7) is mrad, ~2.6× coarser than the sensor.
+    PresentPositionHiRes = 75
+    # Streaming telemetry period in ms (hand-level param). 0 = off (also the
+    # firmware boot default — it's RAM-only). N = the firmware broadcasts a
+    # position snapshot every N ms to whichever host wrote this param.
+    StreamPeriodMs = 76
+
+# Conversion between raw 14-bit encoder counts and radians.
+COUNTS_TO_RAD = 2.0 * math.pi / 16384.0
 
 single_byte_params = set([ParamType.CANID, ParamType.TorqueEnabled, ParamType.Temp])
 
@@ -49,6 +65,19 @@ class CANProtocol:
 
         self.num_joints = num_joints
         self.can_timeout = 0.5
+
+        # Streaming telemetry cache (see set_stream_period_ms /
+        # drain_stream / get_stream_counts). Frames are ingested both by
+        # drain_stream and opportunistically by _recv when they interleave
+        # with request/response traffic.
+        self._stream_counts = np.zeros(num_joints)
+        self._stream_have = np.zeros(num_joints, dtype=bool)
+        self._stream_time = None
+
+        # Whether the firmware supports ParamType.PresentPositionHiRes.
+        # None = unknown (probe on first get_joint_positions); the probe
+        # costs one can_timeout on firmware that predates the param.
+        self._hires_positions = None
 
     def enable(self):
         self._write_param(ParamType.TorqueEnabled, 1)
@@ -76,7 +105,93 @@ class CANProtocol:
         return self._read_param(ParamType.Time)
 
     def get_joint_positions(self):
+        # Prefer the hi-res param (100 µrad wire units — lossless vs the
+        # 14-bit encoder). The legacy PresentPosition wire format is mrad
+        # (0.057°/LSB), coarser than the sensor itself. Firmware without the
+        # hi-res param doesn't answer it, so the first call probes once and
+        # remembers the answer (the failed probe costs one can_timeout).
+        if self._hires_positions is None:
+            try:
+                res = self._read_joint_params(ParamType.PresentPositionHiRes) / 10000
+                self._hires_positions = True
+                return res
+            except TimeoutError:
+                self._hires_positions = False
+        if self._hires_positions:
+            return self._read_joint_params(ParamType.PresentPositionHiRes) / 10000
         return self._read_joint_params(ParamType.PresentPosition) / 1000
+
+    # ── Streaming telemetry ──────────────────────────────────────────────
+    # With set_stream_period_ms(N), the firmware broadcasts a 12-joint
+    # position snapshot every N ms (4 frames of 3 joints, raw encoder
+    # counts) without being asked. Consume with drain_stream() +
+    # get_stream_counts()/get_stream_positions() — zero round-trips.
+
+    def set_stream_period_ms(self, period_ms: int):
+        """Enable (N ms) or disable (0) firmware position streaming to this
+        host. RAM-only on the firmware side — off again after a reboot.
+        Raises TimeoutError on firmware without streaming support."""
+        if period_ms < 0 or period_ms > 1000:
+            raise ValueError('period_ms must be between 0 and 1000')
+        self._write_param(ParamType.StreamPeriodMs, int(period_ms))
+        if period_ms == 0:
+            self._stream_time = None
+            self._stream_have[:] = False
+
+    def drain_stream(self) -> int:
+        """Consume pending broadcast frames without blocking; returns how
+        many stream frames were ingested. Non-stream frames found here are
+        discarded (they can only be stale responses nobody is waiting for)."""
+        n = 0
+        for _ in range(256):
+            msg = self.bus.recv(0)
+            if msg is None:
+                break
+            if self._maybe_ingest_stream(msg):
+                n += 1
+        return n
+
+    def get_stream_counts(self):
+        """Latest streamed snapshot as (raw signed encoder counts ndarray,
+        age in seconds), or None until every joint has been received at
+        least once."""
+        if self._stream_time is None or not self._stream_have.all():
+            return None
+        return self._stream_counts.copy(), time.monotonic() - self._stream_time
+
+    def get_stream_positions(self):
+        """Latest streamed snapshot as (radians ndarray, age in seconds),
+        or None — see get_stream_counts."""
+        snap = self.get_stream_counts()
+        if snap is None:
+            return None
+        counts, age = snap
+        return counts * COUNTS_TO_RAD, age
+
+    def _maybe_ingest_stream(self, msg) -> bool:
+        """If msg is a MessageStreamPositions frame from our hand to us,
+        fold it into the stream cache and return True."""
+        if not getattr(msg, 'is_extended_id', False):
+            return False
+        arb = msg.arbitration_id
+        if ((arb >> 23) & 0xF) != MessageType.StreamPositions.value:
+            return False
+        if (arb & 0xFF) != self.hand_can_id or ((arb >> 8) & 0xFF) != self.host_can_id:
+            return False
+        data = msg.data
+        if len(data) < 2:
+            return False
+        mask = data[0] | (data[1] << 8)
+        pos = 2
+        for j in range(self.num_joints):
+            if mask & (1 << j):
+                if pos + 1 >= len(data):
+                    break
+                self._stream_counts[j] = self._bytes_to_int(data[pos], data[pos + 1])
+                self._stream_have[j] = True
+                pos += 2
+        self._stream_time = time.monotonic()
+        return True
 
     # TargetPosition wire scale: 100µrad units (×10000), ~0.0057°/LSB — finer
     # than the 14-bit encoder. MUST match the firmware (hand.c ParamTargetPosition
@@ -159,32 +274,49 @@ class CANProtocol:
             num_values = self.num_joints
         result = np.zeros(num_values)
 
-        chunk_size = 3 # TODO: can increase for CAN FD or 1 byte values
+        chunk_size = 3  # classic CAN: 2-byte mask + 3×int16 = 8-byte frame
         num_chunks = math.ceil(num_values / chunk_size)
+        # PIPELINED: send every chunk request first, then collect the
+        # responses. The firmware drains its RX ring strictly in order and
+        # CAN preserves frame order, so the k-th response matches the k-th
+        # request even though all responses share one arbitration ID.
+        # Roughly halves the wall time of a multi-chunk read vs the old
+        # send→wait→send→wait pattern. (Requires firmware ≥ 974ab74, whose
+        # response TX waits for a free FIFO slot — the 3-deep TX FIFO would
+        # otherwise drop the 4th response of a burst.)
+        chunk_counts = []
         for i in range(num_chunks):
             idx = i * chunk_size + joint_offset
             last_idx = min(joint_offset + num_values, idx + chunk_size)
             joint_mask = 0
             for j in range(idx, last_idx):
                 joint_mask |= 1 << j
+            chunk_counts.append(last_idx - idx)
             body = [joint_mask & 0xFF, joint_mask >> 8]
             self.bus.send(can.Message(arbitration_id=arb_id, data=body))
+
+        # Collect ALL responses before raising on an error mask, so a failed
+        # chunk can't leave orphan responses in the socket buffer to be
+        # mis-matched by the next operation on the same param.
+        error = None
+        for i, n in enumerate(chunk_counts):
             resp = self._recv(resp_arb_id)
             if resp[0] != 0 or resp[1] != 0:
-                raise Exception('error reading joint params')
-
-            for j in range(last_idx - idx):
-                value = self._bytes_to_int(resp[2 + 2 * j], resp[3 + 2 * j])
-                result[i * chunk_size + j] = value
-            
+                error = error or Exception('error reading joint params')
+                continue
+            for j in range(n):
+                result[i * chunk_size + j] = self._bytes_to_int(resp[2 + 2 * j], resp[3 + 2 * j])
+        if error is not None:
+            raise error
         return result
 
     def _write_joint_params(self, param_type: ParamType, values: np.ndarray, joint_offset: int = 0):
         arb_id = self._param_arb_id(MessageType.WriteJointParam, param_type, self.hand_can_id, self.host_can_id)
         resp_arb_id = self._param_arb_id(MessageType.JointParamResp, param_type, self.host_can_id, self.hand_can_id)
 
-        chunk_size = 3 # TODO: can increase for CAN FD or 1 byte values
+        chunk_size = 3  # classic CAN: 2-byte mask + 3×int16 = 8-byte frame
         num_chunks = math.ceil(len(values) / chunk_size)
+        # PIPELINED — same pattern and ordering argument as _read_joint_params.
         for i in range(num_chunks):
             idx = i * chunk_size
             message_values = values[idx:idx+chunk_size]
@@ -200,15 +332,21 @@ class CANProtocol:
                     v += 1 << 16
                 data.append(v & 0xFF)
                 data.append((v >> 8) & 0xFF)
-            
+
             add_int16(joint_mask)
             for v in message_values:
                 add_int16(int(v))
-            
+
             self.bus.send(can.Message(arbitration_id=arb_id, data=data))
+
+        # Collect ALL responses before raising (see _read_joint_params).
+        error = None
+        for i in range(num_chunks):
             resp_data = self._recv(resp_arb_id)
             if resp_data[0] != 0 or resp_data[1] != 0:
-                raise Exception('Error writing joint params')
+                error = error or Exception('Error writing joint params')
+        if error is not None:
+            raise error
 
     def _value_to_bytes(self, param_type: ParamType, value: int):
         single_byte = param_type in single_byte_params
@@ -225,15 +363,18 @@ class CANProtocol:
             return list(value.to_bytes(2, byteorder='little', signed=True))
 
     def _recv(self, expected_arb_id):
-        for i in range(10):
-            # we can read at most 10 messages before finding the one we want
+        # Budget raised from 10: with streaming enabled, telemetry frames
+        # legitimately interleave with responses — they're ingested into the
+        # stream cache here (not lost), and don't count against finding our
+        # response in any meaningful way at 64 attempts.
+        for i in range(64):
             resp = self.bus.recv(self.can_timeout)
             if resp is None:
                 raise TimeoutError('No CAN response received')
-            elif resp.arbitration_id == expected_arb_id:
+            if resp.arbitration_id == expected_arb_id:
                 return resp.data
-            elif resp.is_extended_id:
-                #print('not expected:', hex(resp.arbitration_id), hex(expected_arb_id))
-                pass
+            if self._maybe_ingest_stream(resp):
+                continue
+            # Anything else: stale response / another node's traffic — skip.
 
         raise TimeoutError('No CAN response received')
