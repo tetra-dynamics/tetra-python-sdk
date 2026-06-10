@@ -44,14 +44,24 @@ class FakeMsg:
 class FakeFirmwareBus:
     """Duck-typed can.BusABC emulating the hand firmware's CAN handlers."""
 
-    def __init__(self, hires_supported=True, write_error_mask=0):
+    def __init__(self, hires_supported=True, write_error_mask=0, old_firmware_tx=False):
         self.out = deque()              # frames waiting for the host to recv
         self.encoder_counts = [0] * 12  # latest_pos[] equivalent (signed counts)
         self.written = {}               # param -> {joint_idx: value}
         self.stream_period_ms = 0
         self.hires_supported = hires_supported
         self.write_error_mask = write_error_mask  # statusMask to return on writes
+        # Firmware < 974ab74: responses are fire-and-forget into a 3-deep TX
+        # FIFO — when requests arrive faster than frames drain, the tail of
+        # a response burst is silently dropped. Model the worst case: any
+        # response beyond 3 already-undelivered ones is lost.
+        self.old_firmware_tx = old_firmware_tx
         self.events = []                # ("send"|"recv") order trace
+
+    def _queue_out(self, msg):
+        if self.old_firmware_tx and len(self.out) >= 3:
+            return  # TX FIFO full — old firmware drops the frame silently
+        self.out.append(msg)
 
     # ── firmware-side helpers (mirror hand.c math exactly) ──────────────
     def _hires_wire(self, counts):
@@ -83,7 +93,7 @@ class FakeFirmwareBus:
                 payload += [v & 0xFF, (v >> 8) & 0xFF]
                 joints_read += 1
         arb = make_arb(HAND_ID, HOST_ID, param, MessageType.JointParamResp.value)
-        self.out.append(FakeMsg(arb, payload))
+        self._queue_out(FakeMsg(arb, payload))
 
     def emit_stream_snapshot(self):
         """Queue the 4 MessageStreamPositions frames the firmware would send."""
@@ -120,12 +130,12 @@ class FakeFirmwareBus:
                     k += 1
             em = self.write_error_mask
             arb = make_arb(HAND_ID, HOST_ID, f["param"], MessageType.JointParamResp.value)
-            self.out.append(FakeMsg(arb, [em & 0xFF, (em >> 8) & 0xFF]))
+            self._queue_out(FakeMsg(arb, [em & 0xFF, (em >> 8) & 0xFF]))
         elif f["mtype"] == MessageType.WriteParam.value:
             if f["param"] == ParamType.StreamPeriodMs.value:
                 self.stream_period_ms = data[0] | (data[1] << 8)
             arb = make_arb(HAND_ID, HOST_ID, f["param"], MessageType.ParamResp.value)
-            self.out.append(FakeMsg(arb, [0]))
+            self._queue_out(FakeMsg(arb, [0]))
 
     def recv(self, timeout=None):
         self.events.append("recv")
@@ -242,6 +252,38 @@ def test_set_stream_period():
     proto.set_stream_period_ms(0)
     assert bus.stream_period_ms == 0
     assert proto.get_stream_counts() is None      # cache invalidated on disable
+
+
+
+
+def test_pipeline_fallback_on_old_firmware():
+    # Firmware < 974ab74 drops the tail of a pipelined response burst (3-deep
+    # fire-and-forget TX FIFO). The SDK must detect the timeout, permanently
+    # fall back to serial round-trips, retry, and still return correct data.
+    bus, proto = make_proto(old_firmware_tx=True)
+    bus.encoder_counts = [11 * (i + 1) for i in range(12)]
+    res = proto._read_joint_params(ParamType.EncoderValue)
+    assert [int(v) for v in res] == bus.encoder_counts
+    assert proto._pipeline is False, "should have downgraded to serial"
+    # Subsequent operations stay serial: send/recv strictly alternate.
+    bus.events.clear()
+    res2 = proto._read_joint_params(ParamType.EncoderValue)
+    assert [int(v) for v in res2] == bus.encoder_counts
+    sends = [i for i, e in enumerate(bus.events) if e == "send"]
+    recvs = [i for i, e in enumerate(bus.events) if e == "recv"]
+    assert all(s < r for s, r in zip(sends, recvs)) and len(sends) == 4
+    assert bus.events[:2] == ["send", "recv"], "not serial after downgrade"
+
+
+def test_pipeline_fallback_write_old_firmware():
+    bus, proto = make_proto(old_firmware_tx=True)
+    targets = np.linspace(-0.5, 0.6, 12)
+    proto.set_joint_positions(targets)   # must succeed via serial retry
+    assert proto._pipeline is False
+    wire = np.clip(targets * 10000, -32767, 32767)
+    stored = bus.written[ParamType.TargetPosition.value]
+    for j in range(12):
+        assert stored[j] == int(wire[j])
 
 
 if __name__ == "__main__":

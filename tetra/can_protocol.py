@@ -79,6 +79,15 @@ class CANProtocol:
         # costs one can_timeout on firmware that predates the param.
         self._hires_positions = None
 
+        # Pipelined chunk transfers (all requests sent before collecting
+        # responses). Firmware older than 974ab74 transmits responses
+        # fire-and-forget into a 3-deep TX FIFO and silently DROPS the tail
+        # of a burst — the first pipelined timeout therefore falls back to
+        # serial round-trips permanently for this connection (see
+        # _transfer_chunks). True by default: new firmware waits for a free
+        # TX slot and never drops.
+        self._pipeline = True
+
     def enable(self):
         self._write_param(ParamType.TorqueEnabled, 1)
 
@@ -266,6 +275,35 @@ class CANProtocol:
         if status != 0:
             raise Exception(f'Error writing param {status}')
 
+    def _transfer_chunks(self, arb_id, resp_arb_id, bodies):
+        """Send request chunks and return their response payloads, in order.
+
+        PIPELINED by default: every request goes out before the first
+        response is collected. The firmware drains its RX ring strictly in
+        order and CAN preserves frame order, so the k-th response matches
+        the k-th request even though all responses share one arbitration
+        ID. Roughly halves the wall time of a multi-chunk transfer.
+
+        Firmware older than 974ab74 transmits responses fire-and-forget
+        into its 3-deep TX FIFO and silently drops the tail of a burst, so
+        the first pipelined timeout permanently downgrades this connection
+        to serial round-trips and retries. The retry is safe: every joint
+        read/write in this protocol is an idempotent value-set, so chunks
+        the firmware already processed are simply re-applied.
+        """
+        if self._pipeline and len(bodies) > 1:
+            try:
+                for body in bodies:
+                    self.bus.send(can.Message(arbitration_id=arb_id, data=body))
+                return [self._recv(resp_arb_id) for _ in bodies]
+            except TimeoutError:
+                self._pipeline = False
+        resps = []
+        for body in bodies:
+            self.bus.send(can.Message(arbitration_id=arb_id, data=body))
+            resps.append(self._recv(resp_arb_id))
+        return resps
+
     def _read_joint_params(self, param_type: ParamType, num_values: int = -1, joint_offset: int = 0) -> np.ndarray:
         arb_id = self._param_arb_id(MessageType.ReadJointParam, param_type, self.hand_can_id, self.host_can_id)
         resp_arb_id = self._param_arb_id(MessageType.JointParamResp, param_type, self.host_can_id, self.hand_can_id)
@@ -276,14 +314,7 @@ class CANProtocol:
 
         chunk_size = 3  # classic CAN: 2-byte mask + 3×int16 = 8-byte frame
         num_chunks = math.ceil(num_values / chunk_size)
-        # PIPELINED: send every chunk request first, then collect the
-        # responses. The firmware drains its RX ring strictly in order and
-        # CAN preserves frame order, so the k-th response matches the k-th
-        # request even though all responses share one arbitration ID.
-        # Roughly halves the wall time of a multi-chunk read vs the old
-        # send→wait→send→wait pattern. (Requires firmware ≥ 974ab74, whose
-        # response TX waits for a free FIFO slot — the 3-deep TX FIFO would
-        # otherwise drop the 4th response of a burst.)
+        bodies = []
         chunk_counts = []
         for i in range(num_chunks):
             idx = i * chunk_size + joint_offset
@@ -292,19 +323,17 @@ class CANProtocol:
             for j in range(idx, last_idx):
                 joint_mask |= 1 << j
             chunk_counts.append(last_idx - idx)
-            body = [joint_mask & 0xFF, joint_mask >> 8]
-            self.bus.send(can.Message(arbitration_id=arb_id, data=body))
+            bodies.append([joint_mask & 0xFF, joint_mask >> 8])
 
-        # Collect ALL responses before raising on an error mask, so a failed
-        # chunk can't leave orphan responses in the socket buffer to be
-        # mis-matched by the next operation on the same param.
+        # Validate AFTER collecting every response, so a failed chunk can't
+        # leave orphan responses in the socket buffer to be mis-matched by
+        # the next operation on the same param.
         error = None
-        for i, n in enumerate(chunk_counts):
-            resp = self._recv(resp_arb_id)
+        for i, resp in enumerate(self._transfer_chunks(arb_id, resp_arb_id, bodies)):
             if resp[0] != 0 or resp[1] != 0:
                 error = error or Exception('error reading joint params')
                 continue
-            for j in range(n):
+            for j in range(chunk_counts[i]):
                 result[i * chunk_size + j] = self._bytes_to_int(resp[2 + 2 * j], resp[3 + 2 * j])
         if error is not None:
             raise error
@@ -316,7 +345,7 @@ class CANProtocol:
 
         chunk_size = 3  # classic CAN: 2-byte mask + 3×int16 = 8-byte frame
         num_chunks = math.ceil(len(values) / chunk_size)
-        # PIPELINED — same pattern and ordering argument as _read_joint_params.
+        bodies = []
         for i in range(num_chunks):
             idx = i * chunk_size
             message_values = values[idx:idx+chunk_size]
@@ -336,13 +365,11 @@ class CANProtocol:
             add_int16(joint_mask)
             for v in message_values:
                 add_int16(int(v))
+            bodies.append(data)
 
-            self.bus.send(can.Message(arbitration_id=arb_id, data=data))
-
-        # Collect ALL responses before raising (see _read_joint_params).
+        # Validate AFTER collecting every response (see _read_joint_params).
         error = None
-        for i in range(num_chunks):
-            resp_data = self._recv(resp_arb_id)
+        for resp_data in self._transfer_chunks(arb_id, resp_arb_id, bodies):
             if resp_data[0] != 0 or resp_data[1] != 0:
                 error = error or Exception('Error writing joint params')
         if error is not None:
