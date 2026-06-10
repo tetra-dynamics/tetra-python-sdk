@@ -286,6 +286,31 @@ def test_pipeline_fallback_write_old_firmware():
         assert stored[j] == int(wire[j])
 
 
+
+
+def test_target_deadman_param():
+    bus, proto = make_proto()
+    # Teach the fake firmware to record param 85 like it does 76.
+    orig_send = bus.send
+    recorded = {}
+    def send(msg):
+        f = parse_arb(msg.arbitration_id)
+        if f["mtype"] == MessageType.WriteParam.value and f["param"] == 85:
+            recorded["deadman_ms"] = msg.data[0] | (msg.data[1] << 8)
+            bus._queue_out(FakeMsg(make_arb(HAND_ID, HOST_ID, 85, MessageType.ParamResp.value), [0]))
+            bus.events.append("send")
+            return
+        orig_send(msg)
+    bus.send = send
+    proto.set_target_deadman_ms(300)
+    assert recorded["deadman_ms"] == 300
+    try:
+        proto.set_target_deadman_ms(20000)
+        raise AssertionError("expected ValueError")
+    except ValueError:
+        pass
+
+
 if __name__ == "__main__":
     fns = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     for fn in fns:

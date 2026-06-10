@@ -42,6 +42,13 @@ class ParamType(enum.Enum):
     # firmware boot default — it's RAM-only). N = the firmware broadcasts a
     # position snapshot every N ms to whichever host wrote this param.
     StreamPeriodMs = 76
+    # Target deadman in ms (hand-level, RAM-only). 0 = off. With torque on,
+    # if no TargetPosition write arrives for N ms the hand goes limp until
+    # the next target write — protects against a crashed teleop/AI host
+    # leaving the hand clenched. Enable per session via
+    # set_target_deadman_ms(); it resets to off on every hand reboot.
+    TargetDeadmanMs = 85
+    DeadmanTripCount = 86   # read-only: deadman trips since boot
 
 # Conversion between raw 14-bit encoder counts and radians.
 COUNTS_TO_RAD = 2.0 * math.pi / 16384.0
@@ -146,6 +153,16 @@ class CANProtocol:
         if period_ms == 0:
             self._stream_time = None
             self._stream_have[:] = False
+
+    def set_target_deadman_ms(self, deadman_ms: int):
+        """Session safety net: with torque enabled, if this process stops
+        writing targets for deadman_ms the hand goes limp instead of holding
+        its last command. 0 disables. RAM-only firmware-side (off after a
+        reboot) — call at session start. Typical teleop/AI value: 200-500 ms
+        (a few missed control periods, well past normal jitter)."""
+        if deadman_ms < 0 or deadman_ms > 10000:
+            raise ValueError('deadman_ms must be between 0 and 10000')
+        self._write_param(ParamType.TargetDeadmanMs, int(deadman_ms))
 
     def drain_stream(self) -> int:
         """Consume pending broadcast frames without blocking; returns how
