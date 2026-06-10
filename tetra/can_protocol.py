@@ -49,7 +49,7 @@ COUNTS_TO_RAD = 2.0 * math.pi / 16384.0
 single_byte_params = set([ParamType.CANID, ParamType.TorqueEnabled, ParamType.Temp])
 
 class CANProtocol:
-    def __init__(self, bus: can.BusABC, hand_can_id: int = 50, host_can_id: int = 0xaa, priority: int = 3, num_joints: int = 10):
+    def __init__(self, bus: can.BusABC, hand_can_id: int = 50, host_can_id: int = 0xaa, priority: int = 3, num_joints: int = 12):
         self.bus = bus
         if hand_can_id <= 0 or hand_can_id > 253:
             raise ValueError('hand_can_id must be between 1 and 253')
@@ -59,8 +59,8 @@ class CANProtocol:
             raise ValueError('host_can_id must be between 1 and 253')
         self.host_can_id = host_can_id
 
-        if 0 > priority > 7:
-            raise ValueError('priority must be between 0 and 7')
+        if priority < 0 or priority > 3:
+            raise ValueError('priority must be between 0 and 3 (2 usable bits in the 29-bit ID)')
         self.priority = priority
 
         self.num_joints = num_joints
@@ -222,12 +222,13 @@ class CANProtocol:
         self._write_joint_params(ParamType.TorqueLimit, limits)
 
     def get_joint_torques(self):
-        res = self._read_joint_params(ParamType.Torque)
-        return res / 100
+        # The custom-servo firmware has no current/torque sensing and does
+        # not answer ParamType.Torque — calling would just block for
+        # can_timeout and raise TimeoutError. Fail fast and explain.
+        raise NotImplementedError('hand firmware has no torque sensing')
 
     def get_joint_temps(self):
-        res = self._read_joint_params(ParamType.Temp)
-        return res / 10
+        raise NotImplementedError('hand firmware has no temperature sensing')
 
     def set_joint_proportional(self, joint_id, value):
         self._write_joint_params(ParamType.Proportional, np.array([value]), joint_id-1)
@@ -258,7 +259,7 @@ class CANProtocol:
             raise Exception('Error reading param')
         
         raw_value = data[1:]
-        if 1 > len(raw_value) > 2:
+        if len(raw_value) < 2:
             raise Exception("Not enough data in response")
 
         return self._bytes_to_int(raw_value[0], raw_value[1])
@@ -378,14 +379,14 @@ class CANProtocol:
     def _value_to_bytes(self, param_type: ParamType, value: int):
         single_byte = param_type in single_byte_params
         if single_byte:
-            if 0 > value > 255:
+            if value < 0 or value > 255:
                 raise ValueError('single byte values must be between 0 and 255')
             elif param_type == ParamType.CANID and value in (255, 254):
                 raise ValueError('CAN ID must be below 254')
 
             return [value]
         else:
-            if -32768 > value > 32767:
+            if value < -32768 or value > 32767:
                 raise ValueError('2 byte value out of range')
             return list(value.to_bytes(2, byteorder='little', signed=True))
 
