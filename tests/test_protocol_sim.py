@@ -311,6 +311,48 @@ def test_target_deadman_param():
         pass
 
 
+
+
+def test_short_frames_raise_cleanly():
+    # Truncated responses (CAN error frames / misbehaving node) must raise a
+    # protocol Exception, never a raw IndexError.
+    bus, proto = make_proto()
+    orig = bus._respond_joint_read
+    def short_responder(param, mask):
+        arb = make_arb(HAND_ID, HOST_ID, param, MessageType.JointParamResp.value)
+        bus.out.append(FakeMsg(arb, [0]))     # 1 byte instead of 8
+    bus._respond_joint_read = short_responder
+    try:
+        proto._read_joint_params(ParamType.EncoderValue, num_values=1, joint_offset=0)
+        raise AssertionError("expected Exception")
+    except IndexError:
+        raise AssertionError("raw IndexError leaked")
+    except Exception as e:
+        assert "Short" in str(e) or "short" in str(e), str(e)
+    bus._respond_joint_read = orig
+
+
+def test_pipeline_middle_drop_recovers():
+    # A response lost from the MIDDLE of a pipelined burst: collection times
+    # out, the SDK downgrades to serial and retries — final data must be
+    # correct and no orphan frames may remain.
+    bus, proto = make_proto()
+    bus.encoder_counts = [7 * (i + 1) for i in range(12)]
+    state = {"reads": 0}
+    orig = bus._respond_joint_read
+    def dropper(param, mask):
+        state["reads"] += 1
+        if state["reads"] == 2:               # silently lose chunk 2's response
+            return
+        orig(param, mask)
+    bus._respond_joint_read = dropper
+    res = proto._read_joint_params(ParamType.EncoderValue)
+    assert [int(v) for v in res] == bus.encoder_counts
+    assert proto._pipeline is False, "should have downgraded to serial"
+    assert len(bus.out) == 0, "orphan frames left in the socket"
+    bus._respond_joint_read = orig
+
+
 if __name__ == "__main__":
     fns = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     for fn in fns:

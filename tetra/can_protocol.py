@@ -271,13 +271,13 @@ class CANProtocol:
         self.bus.send(can.Message(arbitration_id=arb_id, data=[]))
         resp_arb_id = self._param_arb_id(MessageType.ParamResp, param_type, self.host_can_id, self.hand_can_id)
         data = self._recv(resp_arb_id)
+        if len(data) < 3:
+            raise Exception(f'Short param response ({len(data)} bytes)')
         status = data[0]
         if status != 0:
             raise Exception('Error reading param')
-        
+
         raw_value = data[1:]
-        if len(raw_value) < 2:
-            raise Exception("Not enough data in response")
 
         return self._bytes_to_int(raw_value[0], raw_value[1])
 
@@ -289,6 +289,8 @@ class CANProtocol:
             resp_hand_can_id = self.hand_can_id
         resp_arb_id = self._param_arb_id(MessageType.ParamResp, param_type, self.host_can_id, resp_hand_can_id)
         data = self._recv(resp_arb_id)
+        if len(data) < 1:
+            raise Exception('Short param-write response (0 bytes)')
         status = data[0]
         if status != 0:
             raise Exception(f'Error writing param {status}')
@@ -348,6 +350,12 @@ class CANProtocol:
         # the next operation on the same param.
         error = None
         for i, resp in enumerate(self._transfer_chunks(arb_id, resp_arb_id, bodies)):
+            if len(resp) < 2 + 2 * chunk_counts[i]:
+                # Truncated frame (CAN error / misbehaving node): a raw
+                # IndexError here would mask the real problem.
+                error = error or Exception(
+                    f'Short joint response ({len(resp)} bytes for {chunk_counts[i]} joints)')
+                continue
             if resp[0] != 0 or resp[1] != 0:
                 error = error or Exception('error reading joint params')
                 continue
@@ -388,6 +396,9 @@ class CANProtocol:
         # Validate AFTER collecting every response (see _read_joint_params).
         error = None
         for resp_data in self._transfer_chunks(arb_id, resp_arb_id, bodies):
+            if len(resp_data) < 2:
+                error = error or Exception(f'Short write response ({len(resp_data)} bytes)')
+                continue
             if resp_data[0] != 0 or resp_data[1] != 0:
                 error = error or Exception('Error writing joint params')
         if error is not None:
