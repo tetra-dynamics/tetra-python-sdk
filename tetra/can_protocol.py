@@ -49,6 +49,8 @@ class ParamType(enum.Enum):
     # set_target_deadman_ms(); it resets to off on every hand reboot.
     TargetDeadmanMs = 85
     DeadmanTripCount = 86   # read-only: deadman trips since boot
+    DerivLpfN = 87          # per-joint D-term LPF length, per-motor PID (1-32; default 4)
+    TargetLpfAlpha = 88     # per-joint target-LPF alpha ×256 (1-256; default 32; 256 = no smoothing)
 
 # Conversion between raw 14-bit encoder counts and radians.
 COUNTS_TO_RAD = 2.0 * math.pi / 16384.0
