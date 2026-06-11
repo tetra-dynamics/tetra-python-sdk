@@ -421,18 +421,31 @@ class CANProtocol:
             return list(value.to_bytes(2, byteorder='little', signed=True))
 
     def _recv(self, expected_arb_id):
-        # Budget raised from 10: with streaming enabled, telemetry frames
-        # legitimately interleave with responses — they're ingested into the
-        # stream cache here (not lost), and don't count against finding our
-        # response in any meaningful way at 64 attempts.
-        for i in range(64):
-            resp = self.bus.recv(self.can_timeout)
+        # Wall-clock deadline + a budget of NON-stream frames. Stream
+        # telemetry must NOT consume budget: at a 10 ms stream period, any
+        # pause in polling (step tests quiesce the host poll loop; several
+        # diagnostics sleep between writes) queues hundreds of snapshot
+        # frames AHEAD of our response. The old fixed 64-iteration scan
+        # exhausted itself on that backlog and raised TimeoutError with the
+        # response still sitting in the kernel queue. Stream frames are
+        # ingested into the cache (not lost) and skipped for free.
+        deadline = time.monotonic() + self.can_timeout
+        skipped = 0
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                break
+            resp = self.bus.recv(remaining)
             if resp is None:
-                raise TimeoutError('No CAN response received')
+                break
             if resp.arbitration_id == expected_arb_id:
                 return resp.data
             if self._maybe_ingest_stream(resp):
                 continue
-            # Anything else: stale response / another node's traffic — skip.
+            # Anything else: stale response / another node's traffic — skip,
+            # but bound how much foreign traffic we'll chew through.
+            skipped += 1
+            if skipped >= 64:
+                break
 
         raise TimeoutError('No CAN response received')
